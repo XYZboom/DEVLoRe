@@ -1,15 +1,28 @@
 import os
+import subprocess
 import sys
 from typing import *
 
+import dotenv
+from dotenv import load_dotenv, find_dotenv
 from pydantic import BaseModel, Field
 import argparse
 
+_ = load_dotenv(find_dotenv())
+
 ignore_paths = ["/.git", "/.classes.tmp", "/target", "/.idea"]
-project_parser = argparse.ArgumentParser(description="Command in project")
+project_parser = argparse.ArgumentParser(description="Command in project", exit_on_error=False)
 subparsers = project_parser.add_subparsers(dest="subcommand")  # save subcommands in "args.subcommand"
 
 all_files_parser = subparsers.add_parser("all_files", help="Show all files in project")
+count_files_parser = subparsers.add_parser("count_files", help="Count all files in project")
+run_test_parser = subparsers.add_parser("run_test", help="Run test in project, return value is test result."
+                                                         "After running test, use 'failed_test' to check test that "
+                                                         "failed")
+failed_test_parser = subparsers.add_parser("failed_test", help="Show failed test. Must use after run 'run_test'")
+D4J_RELEVANT = "d4j.classes.relevant"
+D4J_EXEC = os.environ.get("DEFECTS4J_EXEC")
+D4J_FAILING_TEST = "failing_tests"
 
 
 class Project:
@@ -28,6 +41,11 @@ class Project:
                 self._files.append(os.path.join(path.replace(base_dir, ''), f))
         if len(self._files) == 0:
             raise Exception(f"No files found in {base_dir}")
+        _d4j_file_name = os.path.join(base_dir, "defects4j.build.properties")
+        if not os.path.exists(_d4j_file_name):
+            raise FileNotFoundError("No defects4j.build.properties file found")
+        self._d4j_configs = dotenv.dotenv_values(_d4j_file_name)
+        self._relevant_classes = self._d4j_configs.get(D4J_RELEVANT)
 
     def content_of_file(self, file_path: Annotated[str, "The path of the file to be opened. e.g. "
                                                         "org/jetbrains/java/PsiClass.java"]
@@ -42,21 +60,49 @@ class Project:
     def all_files(self) -> List[str]:
         return self._files
 
-    def command(self, cmd: Annotated[str, "The command to be executed. e.g. all_files. Type -h show help"]) -> str:
-        _args = project_parser.parse_args(cmd.split(" "))
+    def run_test(self):
+        result = subprocess.run(f"{D4J_EXEC} test -r", shell=True,
+                                stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.base_dir)
+        stdout = result.stdout.decode("utf-8")
+        stderr = result.stderr.decode("utf-8")
+        failed_count = int(stdout.splitlines()[0].split(":")[-1].strip())
+        if failed_count:
+            return stdout
+        else:
+            return "success"
+
+    def failed_test(self):
+        _failing_file = os.path.join(self.base_dir, D4J_FAILING_TEST)
+        if not os.path.exists(_failing_file):
+            raise FileNotFoundError(_failing_file)
+        with open(_failing_file, "r") as f:
+            return f.read()
+
+    def command(self, cmd: Annotated[str, "The command to be executed. Type -h show help"]) -> str:
+        try:
+            _args, _unknown = project_parser.parse_known_args(cmd.split(" "))
+        except SystemExit:
+            return project_parser.format_help()
         if _args.subcommand == "all_files":
             return "\n".join(self.all_files())
+        elif _args.subcommand == "count_files":
+            return str(len(self.all_files()))
+        elif _args.subcommand == "run_test":
+            return self.run_test()
+        elif _args.subcommand == "failed_test":
+            return self.failed_test()
 
 
-def test_content_of_file(_project: Project) -> None:
+def test_llm(_project: Project) -> None:
     from autogen import ConversableAgent
 
     # Let's first define the assistant agent that suggests tool calls.
     assistant = ConversableAgent(
         name="Assistant",
-        system_message="You are a file manager. "
-                       "You can help look content of files. "
-                       "Return 'TERMINATE' when the task is done.",
+        system_message="You are a project manager. "
+                       "You can manage Java project. "
+                       "You cannot run command directly, you can only use some pre-defined commands",
+                       # "Return 'TERMINATE' when the task is done.",
         llm_config={"config_list": [{"model": "gpt-3.5-turbo-0125", "api_key": os.environ["OPENAI_API_KEY"],
                                      "price": [0.00365, 0.0146]}]},
     )
@@ -85,12 +131,12 @@ def test_content_of_file(_project: Project) -> None:
         caller=assistant,  # The assistant agent can suggest calls to the calculator.
         executor=user_proxy,  # The user proxy agent can execute the calculator calls.
         name="command",  # By default, the function name is used as the tool name.
-        description="A tool that execute command such \"all_files\" to show all file names in project",
+        description="A tool that execute **custom** commands (**Not** a shell)." + project_parser.format_help(),
         # A description of the tool.
     )
     chat_result = user_proxy.initiate_chat(
         assistant,
-        message="How many files in this project?",
+        message="Run test in project and tell me which test failed",
         max_turns=4
     )
     print(chat_result)
@@ -98,6 +144,10 @@ def test_content_of_file(_project: Project) -> None:
 
 def test_command(_project: Project) -> None:
     _project.command("-h")
+
+
+def test_run_test(_project: Project) -> None:
+    _project.run_test()
 
 
 if __name__ == '__main__':
@@ -120,5 +170,6 @@ if __name__ == '__main__':
 
     load_env()
 
-    # test_content_of_file(project)
-    test_command(project)
+    test_llm(project)
+    # test_command(project)
+    # test_run_test(project)
