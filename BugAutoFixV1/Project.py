@@ -73,6 +73,7 @@ class Project:
     ) -> str:
         _content = self.content_of_file(file_path)
         _tree = javalang.parse.parse(_content)
+        class_name = class_name.split(".")[-1]
         _classes = [clazz for clazz in _tree.types if clazz.name == class_name]
         if len(_classes) == 0:
             raise Exception(f"No class named {class_name} in {file_path}")
@@ -117,7 +118,7 @@ class Project:
         return "replace success"
 
     def undo_all_files(self):
-        subprocess.run("git checkout HEAD -- *", shell=True,
+        subprocess.run("git reset HEAD --hard", shell=True,
                        stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.base_dir)
         return "undo all success"
 
@@ -203,14 +204,14 @@ def test_llm(_project: Project) -> None:
     #     name="content_of_file",  # By default, the function name is used as the tool name.
     #     description="A tool that show the content of specified file.",  # A description of the tool.
     # )
-    register_function(
-        partial(_project.modify_file),
-        caller=assistant,  # The assistant agent can suggest calls to the calculator.
-        executor=user_proxy,  # The user proxy agent can execute the calculator calls.
-        name="modify_source_file",  # By default, the function name is used as the tool name.
-        description="A tool that can modify **ONE LINE** in specified **SOURCE** file. "
-                    "This tool is **NOT allowed to modify the test files**",  # A description of the tool.
-    )
+    # register_function(
+    #     partial(_project.modify_file),
+    #     caller=assistant,  # The assistant agent can suggest calls to the calculator.
+    #     executor=user_proxy,  # The user proxy agent can execute the calculator calls.
+    #     name="modify_source_file",  # By default, the function name is used as the tool name.
+    #     description="A tool that can modify **ONE LINE** in specified **SOURCE** file. "
+    #                 "This tool is **NOT allowed to modify the test files**",  # A description of the tool.
+    # )
     register_function(
         partial(_project.replace_file),
         caller=assistant,  # The assistant agent can suggest calls to the calculator.
@@ -239,7 +240,7 @@ def test_llm(_project: Project) -> None:
     chat_result = user_proxy.initiate_chat(
         assistant,
         message="Fix the bug in this project. Your goal is to pass the tests.",
-        max_turns=20
+        max_turns=50
     )
     autogen.runtime_logging.stop()
     print(chat_result)
