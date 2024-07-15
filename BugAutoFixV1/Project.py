@@ -156,10 +156,15 @@ class Project:
         with open(_failing_file, "r") as f:
             _lines = f.read().splitlines()
         _result_lines = []
+        _this_test_end = False
         for line in _lines:
+            if line.startswith("---"):
+                _this_test_end = False
             if line.endswith("(Native Method)"):
-                return "\n".join(_result_lines)
-            _result_lines.append(line)
+                _this_test_end = True
+            if not _this_test_end:
+                _result_lines.append(line)
+        return "\n".join(_result_lines)
 
     def debug_info(
             self, test_class_name: Annotated[str, "The test class name. "
