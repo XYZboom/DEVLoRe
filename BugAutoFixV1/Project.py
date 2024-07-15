@@ -20,7 +20,10 @@ all_files_parser = subparsers.add_parser("all_files", help="Show all files in pr
 count_files_parser = subparsers.add_parser("count_files", help="Count all files in project")
 run_test_parser = subparsers.add_parser("run_test", help="Run test in project, return value is test result.")
 undo_all_parser = subparsers.add_parser("undo_all", help="Undo all changes.")
-D4J_RELEVANT = "d4j.classes.relevant"
+D4J_RELEVANT_KEY = "d4j.classes.relevant"
+D4J_SRC_PATH_KEY = "d4j.dir.src.classes"
+D4J_TEST_PATH_KEY = "d4j.dir.src.tests"
+D4J_TRIGGER_KEY = "d4j.tests.trigger"
 D4J_EXEC = os.environ.get("DEFECTS4J_EXEC")
 D4J_FAILING_TEST = "failing_tests"
 DEBUG_LOG_NAME = "bugDetect.log"
@@ -30,6 +33,17 @@ class Project:
     def __init__(self, base_dir: str):
         self.base_dir = base_dir
         self._files = []
+        self.undo_all_files()
+        _d4j_file_name = os.path.join(base_dir, "defects4j.build.properties")
+        if not os.path.exists(_d4j_file_name):
+            raise FileNotFoundError("No defects4j.build.properties file found")
+        self._d4j_configs = dotenv.dotenv_values(_d4j_file_name)
+        self._relevant_classes = self._d4j_configs.get(D4J_RELEVANT_KEY).split(",")
+        self._src_path = self._d4j_configs.get(D4J_SRC_PATH_KEY)
+        self._test_path = self._d4j_configs.get(D4J_TEST_PATH_KEY)
+        self._trigger_test_methods = self._d4j_configs.get(D4J_TRIGGER_KEY)
+        self._trigger_tests = [self._trigger_test_methods.split("::")[0]
+                               for _test_method in self._trigger_test_methods.split(",")]
         for path, dirs, files in os.walk(base_dir):
             ignore = False
             for ignore_path in ignore_paths:
@@ -39,15 +53,19 @@ class Project:
             if ignore:
                 continue
             for f in files:
-                self._files.append(os.path.join(path.replace(base_dir, ''), f))
+                if f.endswith(".java"):
+                    _f_path = os.path.join(path.replace(base_dir, ''), f)
+                    _class_name = (_f_path.removesuffix(".java").removesuffix("/").removeprefix("/")
+                                   .removeprefix(self._src_path).removeprefix(self._test_path)
+                                   .removesuffix("/").removeprefix("/")
+                                   .replace("/", "."))
+                    if _class_name in self._relevant_classes or _class_name in self._trigger_tests:
+                        self._files.append(_f_path)
         if len(self._files) == 0:
             raise Exception(f"No files found in {base_dir}")
-        self.undo_all_files()
-        _d4j_file_name = os.path.join(base_dir, "defects4j.build.properties")
-        if not os.path.exists(_d4j_file_name):
-            raise FileNotFoundError("No defects4j.build.properties file found")
-        self._d4j_configs = dotenv.dotenv_values(_d4j_file_name)
-        self._relevant_classes = self._d4j_configs.get(D4J_RELEVANT)
+
+    def trigger_test_methods(self):
+        return self._trigger_test_methods
 
     def _find_file(self, file: str) -> str:
         for f_name in self._files:
@@ -89,17 +107,22 @@ class Project:
             _result += line + "// line " + str(index + _start_line + 1) + "\n"
         return _result
 
-    def modify_file(self, file_path: Annotated[str, "The path of the file to be modified."],
-                    line: Annotated[int, "The line to be modified"],
-                    new_content: Annotated[str, "The content of the modified file."]) -> str:
+    def modify_file(
+            self,
+            file_path: Annotated[str, "Path of file to change."],
+            start_line: Annotated[int, "Start line number to replace with new code."],
+            end_line: Annotated[int, "End line number to replace with new code."],
+            new_code: Annotated[str, "New piece of code to replace old code with. Remember about providing indents."],
+    ) -> str:
         if "test" in file_path or "Test" in file_path:
             raise Exception("Test files can not be modified")
         file_path = self._find_file(file_path)
-        with open(file_path, "r") as f:
-            lines = f.readlines()
-        lines[line - 1] = new_content
-        with open(file_path, "w") as f:
-            f.writelines(lines)
+        with open(file_path, "r+") as file:
+            file_contents = file.readlines()
+            file_contents[start_line - 1: end_line] = [new_code + "\n"]
+            file.seek(0)
+            file.truncate()
+            file.write("".join(file_contents))
         return "modify success"
 
     def replace_file(self, file_path: Annotated[str, "The path of the file to be modified."],
@@ -198,6 +221,8 @@ class Project:
                 break
             if _started:
                 _result_list.append(line)
+        if len(_result_list) == 0:
+            raise Exception("No such debug info found! Run all tests to generate debug info.")
         return "\n".join(_result_list)
 
     def command(self, cmd: Annotated[str, "The command to be executed. Type -h show help"]) -> str:
@@ -222,12 +247,13 @@ def test_llm(_project: Project) -> None:
     assistant = ConversableAgent(
         name="Assistant",
         system_message="You are a software development engineer who has just taken over a new project, "
-                       "and your goal is to pass the testing of this project. "
-                       "Before you do your fix, you must check debug information."
+                       "and your goal is to pass the tests of this project. "
+                       "Use 'run_test' tool to run tests after your fix."
                        "You **cannot modify test cases** during repair, nor can you do hard coding.",
         # "Return 'TERMINATE' when the task is done.",
         llm_config={"config_list": [{"model": "gpt-3.5-turbo", "api_key": os.environ["OPENAI_API_KEY"],
-                                     "price": [0.00365, 0.0146]}]},
+                                     "price": [0.00365, 0.0146]}],
+                    "cache_seed": None},
     )
 
     # The user proxy agent is used for interacting with the assistant agent
@@ -250,14 +276,14 @@ def test_llm(_project: Project) -> None:
     #     name="content_of_file",  # By default, the function name is used as the tool name.
     #     description="A tool that show the content of specified file.",  # A description of the tool.
     # )
-    # register_function(
-    #     partial(_project.modify_file),
-    #     caller=assistant,  # The assistant agent can suggest calls to the calculator.
-    #     executor=user_proxy,  # The user proxy agent can execute the calculator calls.
-    #     name="modify_source_file",  # By default, the function name is used as the tool name.
-    #     description="A tool that can modify **ONE LINE** in specified **SOURCE** file. "
-    #                 "This tool is **NOT allowed to modify the test files**",  # A description of the tool.
-    # )
+    register_function(
+        partial(_project.modify_file),
+        caller=assistant,  # The assistant agent can suggest calls to the calculator.
+        executor=user_proxy,  # The user proxy agent can execute the calculator calls.
+        name="modify_source_file",  # By default, the function name is used as the tool name.
+        description="A tool that can modify lines in specified **SOURCE** file. "
+                    "This tool is **NOT allowed to modify the test files**",  # A description of the tool.
+    )
     register_function(
         partial(_project.replace_file),
         caller=assistant,  # The assistant agent can suggest calls to the calculator.
@@ -295,7 +321,8 @@ def test_llm(_project: Project) -> None:
     autogen.runtime_logging.start(logger_type="file", config={"filename": f"{uuid.uuid4()}.log"})
     chat_result = user_proxy.initiate_chat(
         assistant,
-        message="Fix the bug in this project. Your goal is to pass the tests.",
+        message="Fix the bug in this project. Your goal is to pass the tests. Now the failed test(s) is "
+                + str(project.trigger_test_methods()),
         max_turns=50
     )
     autogen.runtime_logging.stop()
@@ -327,6 +354,11 @@ def test_debug_info(_project: Project):
     ))
 
 
+def test_all_files(_project: Project):
+    print(_project.content_of_file("org/apache/commons/lang3/math/NumberUtils.java"))
+    print(_project.all_files())
+
+
 if __name__ == '__main__':
     import os
     import argparse
@@ -335,7 +367,6 @@ if __name__ == '__main__':
     parser.add_argument("--base-dir", help="base dir of the project", required=True)
     args = parser.parse_args()
     project = Project(args.base_dir)
-    # print(project.content_of_file("org/apache/commons/lang3/math/NumberUtils.java"))
 
     # 获取当前脚本所在目录的上级目录的绝对路径
     parent_dir = os.path.dirname(os.path.abspath(__file__))
@@ -352,3 +383,4 @@ if __name__ == '__main__':
     # test_run_test(project)
     # test_method(project)
     # test_debug_info(project)
+    # test_all_files(project)
