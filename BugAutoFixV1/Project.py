@@ -18,14 +18,12 @@ subparsers = project_parser.add_subparsers(dest="subcommand")  # save subcommand
 
 all_files_parser = subparsers.add_parser("all_files", help="Show all files in project")
 count_files_parser = subparsers.add_parser("count_files", help="Count all files in project")
-run_test_parser = subparsers.add_parser("run_test", help="Run test in project, return value is test result."
-                                                         "After running test, use 'failed_test' to check test that "
-                                                         "failed")
-failed_test_parser = subparsers.add_parser("failed_test", help="Show failed test. Must use after run 'run_test'")
+run_test_parser = subparsers.add_parser("run_test", help="Run test in project, return value is test result.")
 undo_all_parser = subparsers.add_parser("undo_all", help="Undo all changes.")
 D4J_RELEVANT = "d4j.classes.relevant"
 D4J_EXEC = os.environ.get("DEFECTS4J_EXEC")
 D4J_FAILING_TEST = "failing_tests"
+DEBUG_LOG_NAME = "bugDetect.log"
 
 
 class Project:
@@ -126,6 +124,11 @@ class Project:
         return self._files
 
     def run_test(self):
+        # noinspection PyBroadException
+        try:
+            os.remove(os.path.join(self.base_dir, DEBUG_LOG_NAME))
+        except Exception as _:
+            pass
         result = subprocess.run(f"{D4J_EXEC} test -r", shell=True,
                                 stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.base_dir)
         stdout = result.stdout.decode("utf-8")
@@ -142,7 +145,7 @@ class Project:
             return _result
         failed_count = int(stdout.splitlines()[0].split(":")[-1].strip())
         if failed_count:
-            return stdout
+            return self.failed_test()
         else:
             return "success"
 
@@ -151,7 +154,46 @@ class Project:
         if not os.path.exists(_failing_file):
             raise FileNotFoundError(_failing_file)
         with open(_failing_file, "r") as f:
-            return f.read()
+            _lines = f.read().splitlines()
+        _result_lines = []
+        for line in _lines:
+            if line.endswith("(Native Method)"):
+                return "\n".join(_result_lines)
+            _result_lines.append(line)
+
+    def debug_info(
+            self, test_class_name: Annotated[str, "The test class name. "
+                                                  "e.g. org.apache.commons.lang3.math.NumberUtilsTest"],
+            method_name: Annotated[str, "The test method name. e.g. testMethod"],
+            start_line: Annotated[int, "The line in specified method that debug info start."
+                                       " -1 means start at the beginning of the method."] = -1,
+            end_line: Annotated[int, "The line in specified method that debug info end. "
+                                     "-1 means end at the end of the method."] = -1,
+    ) -> str:
+        _result_list = []
+        with open(os.path.join(self.base_dir, DEBUG_LOG_NAME), "r") as f:
+            lines = f.read().splitlines()
+        _started = False
+        for line in lines:
+            if line.startswith("----------") and line.endswith("----------"):
+                continue
+            if line.startswith(f"{test_class_name}:{method_name}"):
+                if start_line != -1:
+                    if line.removeprefix(f"{test_class_name}:{method_name}:") == str(start_line):
+                        _started = True
+                else:
+                    _started = True
+                if _started and end_line != -1 \
+                        and int(line.removeprefix(f"{test_class_name}:{method_name}:")) > end_line:
+                    # should end when current line gt end_line
+                    break
+            elif (_started and
+                  (line.startswith(test_class_name) or  # Other method line
+                   (not line.startswith("{") and line.split(":")[0].endswith("Test")))):  # other Test class
+                break
+            if _started:
+                _result_list.append(line)
+        return "\n".join(_result_list)
 
     def command(self, cmd: Annotated[str, "The command to be executed. Type -h show help"]) -> str:
         try:
@@ -164,8 +206,6 @@ class Project:
             return str(len(self.all_files()))
         elif _args.subcommand == "run_test":
             return self.run_test()
-        elif _args.subcommand == "failed_test":
-            return self.failed_test()
         elif _args.subcommand == "undo_all":
             return self.undo_all_files()
 
@@ -178,6 +218,7 @@ def test_llm(_project: Project) -> None:
         name="Assistant",
         system_message="You are a software development engineer who has just taken over a new project, "
                        "and your goal is to pass the testing of this project. "
+                       "Before you do your fix, you must check debug information."
                        "You **cannot modify test cases** during repair, nor can you do hard coding.",
         # "Return 'TERMINATE' when the task is done.",
         llm_config={"config_list": [{"model": "gpt-3.5-turbo", "api_key": os.environ["OPENAI_API_KEY"],
@@ -226,7 +267,9 @@ def test_llm(_project: Project) -> None:
         executor=user_proxy,  # The user proxy agent can execute the calculator calls.
         name="content_of_method",  # By default, the function name is used as the tool name.
         description="A tool that shows the content of method. "
-                    "Source methods and test methods are both supported.",  # A description of the tool.
+                    "Source methods and test methods are both supported."
+                    "If there is an error here, it may mean that your "
+                    "last modification cases a compile error, try to redo your modification.",
     )
     register_function(
         partial(_project.command),
@@ -235,6 +278,14 @@ def test_llm(_project: Project) -> None:
         name="command",  # By default, the function name is used as the tool name.
         description="A tool that execute **custom** commands (**Not** a shell)." + project_parser.format_help(),
         # A description of the tool.
+    )
+    register_function(
+        partial(_project.debug_info),
+        caller=assistant,  # The assistant agent can suggest calls to the calculator.
+        executor=user_proxy,  # The user proxy agent can execute the calculator calls.
+        name="debug_info",  # By default, the function name is used as the tool name.
+        description="A tool that can show debug information of last test. "
+                    "You can choose start line and end line from a test method.",
     )
     autogen.runtime_logging.start(logger_type="file", config={"filename": f"{uuid.uuid4()}.log"})
     chat_result = user_proxy.initiate_chat(
@@ -258,6 +309,17 @@ def test_method(_project: Project):
     print(_project.content_of_method("NumberUtils.java", "NumberUtils", "createNumber"))
     print(_project.content_of_method("test/org/apache/commons/lang3/math/NumberUtilsTest.java",
                                      "NumberUtilsTest", "TestLang747"))
+
+
+def test_debug_info(_project: Project):
+    _project.run_test()
+    print(_project.debug_info("org.apache.commons.lang3.math.NumberUtilsTest", "TestLang747"))
+    print("-----------------------------")
+    print(_project.debug_info(
+        "org.apache.commons.lang3.math.NumberUtilsTest",
+        "TestLang747",
+        256, 256
+    ))
 
 
 if __name__ == '__main__':
@@ -284,3 +346,4 @@ if __name__ == '__main__':
     # test_command(project)
     # test_run_test(project)
     # test_method(project)
+    # test_debug_info(project)
