@@ -19,12 +19,14 @@ subparsers = project_parser.add_subparsers(dest="subcommand")  # save subcommand
 all_files_parser = subparsers.add_parser("all_files", help="Show all files in project")
 count_files_parser = subparsers.add_parser("count_files", help="Count all files in project")
 run_test_parser = subparsers.add_parser("run_test", help="Run test in project, return value is test result.")
-undo_all_parser = subparsers.add_parser("undo_all", help="Undo all changes.")
+# undo_all_parser = subparsers.add_parser("undo_all", help="Undo all changes.")
 D4J_RELEVANT_KEY = "d4j.classes.relevant"
 D4J_SRC_PATH_KEY = "d4j.dir.src.classes"
 D4J_TEST_PATH_KEY = "d4j.dir.src.tests"
 D4J_TRIGGER_KEY = "d4j.tests.trigger"
 D4J_EXEC = os.environ.get("DEFECTS4J_EXEC")
+if not D4J_EXEC:
+    raise Exception("D4J_EXEC env variable is not set")
 D4J_FAILING_TEST = "failing_tests"
 DEBUG_LOG_NAME = "bugDetect.log"
 
@@ -149,6 +151,11 @@ class Project:
     def run_test(self):
         # noinspection PyBroadException
         try:
+            os.remove(os.path.join(self.base_dir, D4J_FAILING_TEST))
+        except Exception as _:
+            pass
+        # noinspection PyBroadException
+        try:
             os.remove(os.path.join(self.base_dir, DEBUG_LOG_NAME))
         except Exception as _:
             pass
@@ -240,16 +247,107 @@ class Project:
             return self.undo_all_files()
 
 
+def test_group_chat(_project: Project) -> None:
+    import autogen
+    from autogen import ConversableAgent, GroupChat, GroupChatManager, \
+        register_function
+    from functools import partial
+
+    llm_config = {"config_list": [{"model": "gpt-3.5-turbo", "api_key": os.environ["OPENAI_API_KEY"],
+                                   "price": [0.00365, 0.0146]}],
+                  "cache_seed": None}
+    bug_fixer = ConversableAgent(
+        name="Bug fixer",
+        system_message="You are a bug fixer. Your goal is to pass all the test in the project."
+                       "You can ask your assistants to interpret the program",
+        llm_config=llm_config
+    )
+    testcase_explainer = ConversableAgent(
+        name="Testcase explainer",
+        system_message="You are a testcase explainer. Your goal is to explain testcases in the project and help"
+                       "bug fixer to pass all the test in the project.",
+        llm_config=llm_config
+    )
+    programming_assistant = ConversableAgent(
+        name="Programming assistant",
+        system_message="You are a programming assistant. Your goal is to help bug fixer edit the files in the project.",
+        llm_config=llm_config
+    )
+    command_executor = ConversableAgent(
+        name="Command executor",
+        llm_config=False,
+        # is_termination_msg=lambda msg: msg.startswith("TERMINATE"),
+        human_input_mode="NEVER",
+    )
+    group_chat = GroupChat(
+        agents=[bug_fixer, testcase_explainer, programming_assistant, command_executor],
+        messages=[],
+        max_round=6,
+    )
+    group_chat_manager = GroupChatManager(
+        groupchat=group_chat,
+        llm_config=False,
+        human_input_mode="ALWAYS"
+    )
+
+    def auto_reply_function(recipient, messages, sender, config):
+        if "callback" in config and config["callback"] is not None:
+            callback = config["callback"]
+            callback(sender, recipient, messages[-1])
+        return True, "No command to execute!"  # required to ensure the agent communication flow continues
+
+    command_executor.register_reply(
+        [autogen.Agent, None],
+        reply_func=auto_reply_function,
+        config={"callback": None},
+        position=-1,
+    )
+    content_of_method_description = "A tool that shows the content of method. " \
+                                    "Source methods and test methods are both supported." \
+                                    "If there is an error here, it may mean that your " \
+                                    "last modification cases a compile error, try to redo your modification."
+    content_of_method_f = partial(_project.content_of_method)
+    testcase_explainer.register_for_llm(name="content_of_method",
+                                        description=content_of_method_description)(content_of_method_f)
+    bug_fixer.register_for_llm(name="content_of_method",
+                               description=content_of_method_description)(content_of_method_f)
+    command_executor.register_for_execution(name="content_of_method")(content_of_method_f)
+    register_function(
+        partial(_project.command),
+        caller=programming_assistant,  # The assistant agent can suggest calls to the calculator.
+        executor=command_executor,  # The user proxy agent can execute the calculator calls.
+        name="command",  # By default, the function name is used as the tool name.
+        description="A tool that execute **custom** commands (**Not** a shell)." + project_parser.format_help(),
+        # A description of the tool.
+    )
+    register_function(
+        partial(_project.debug_info),
+        caller=bug_fixer,  # The assistant agent can suggest calls to the calculator.
+        executor=command_executor,  # The user proxy agent can execute the calculator calls.
+        name="debug_info",  # By default, the function name is used as the tool name.
+        description="A tool that can show debug information of last test. "
+                    "You can choose start line and end line from a test method.",
+    )
+
+    chat_result = command_executor.initiate_chat(
+        group_chat_manager,
+        message="Fix the bug(s) in this project. Your goal is to pass all the tests in the project."
+    )
+    print(chat_result)
+
+
 def test_llm(_project: Project) -> None:
     from autogen import ConversableAgent
 
     # Let's first define the assistant agent that suggests tool calls.
     assistant = ConversableAgent(
         name="Assistant",
-        system_message="You are a software development engineer who has just taken over a new project, "
-                       "and your goal is to pass the tests of this project. "
-                       "Use 'run_test' tool to run tests after your fix."
-                       "You **cannot modify test cases** during repair, nor can you do hard coding.",
+        system_message="You are a bug locator, "
+                       "and your goal is to **locate (not fix)** the buggy method or the buggy line. "
+                       "Note that bugs may not necessarily occur at the location of the exception, "
+                       "and may be caused by code implementation that does not match the expected situation",
+        # "Use 'run_test' tool to run tests after your fix."
+        # "You **cannot modify test cases** during repair, nor can you do hard coding.",
         # "Return 'TERMINATE' when the task is done.",
         llm_config={"config_list": [{"model": "gpt-3.5-turbo", "api_key": os.environ["OPENAI_API_KEY"],
                                      "price": [0.00365, 0.0146]}],
@@ -264,9 +362,29 @@ def test_llm(_project: Project) -> None:
         # is_termination_msg=lambda msg: msg.startswith("TERMINATE"),
         human_input_mode="NEVER",
     )
+
+    def auto_reply_function(recipient, messages, sender, config):
+        if "callback" in config and config["callback"] is not None:
+            callback = config["callback"]
+            callback(sender, recipient, messages[-1])
+        # if "tool_calls" in messages[-1]:
+        #     return False, None
+        print(f"Messages sent to: {recipient.name} | num messages: {len(messages)}")
+        _test_result = project.run_test()
+        if _test_result != "success":
+            return True, "Test failed!\n" + _test_result
+        return False, None  # required to ensure the agent communication flow continues
+
     from functools import partial
     import autogen
     from autogen import register_function
+
+    user_proxy.register_reply(
+        [autogen.Agent, None],
+        reply_func=auto_reply_function,
+        config={"callback": None},
+        position=-1,
+    )
 
     # Register the calculator function to the two agents.
     # register_function(
@@ -276,22 +394,22 @@ def test_llm(_project: Project) -> None:
     #     name="content_of_file",  # By default, the function name is used as the tool name.
     #     description="A tool that show the content of specified file.",  # A description of the tool.
     # )
-    register_function(
-        partial(_project.modify_file),
-        caller=assistant,  # The assistant agent can suggest calls to the calculator.
-        executor=user_proxy,  # The user proxy agent can execute the calculator calls.
-        name="modify_source_file",  # By default, the function name is used as the tool name.
-        description="A tool that can modify lines in specified **SOURCE** file. "
-                    "This tool is **NOT allowed to modify the test files**",  # A description of the tool.
-    )
-    register_function(
-        partial(_project.replace_file),
-        caller=assistant,  # The assistant agent can suggest calls to the calculator.
-        executor=user_proxy,  # The user proxy agent can execute the calculator calls.
-        name="replace_source_file",  # By default, the function name is used as the tool name.
-        description="A tool that can replace the content of **SOURCE** file. "
-                    "This tool is **NOT allowed to modify the test files**",  # A description of the tool.
-    )
+    # register_function(
+    #     partial(_project.modify_file),
+    #     caller=assistant,  # The assistant agent can suggest calls to the calculator.
+    #     executor=user_proxy,  # The user proxy agent can execute the calculator calls.
+    #     name="modify_source_file",  # By default, the function name is used as the tool name.
+    #     description="A tool that can modify lines in specified **SOURCE** file. "
+    #                 "This tool is **NOT allowed to modify the test files**",  # A description of the tool.
+    # )
+    # register_function(
+    #     partial(_project.replace_file),
+    #     caller=assistant,  # The assistant agent can suggest calls to the calculator.
+    #     executor=user_proxy,  # The user proxy agent can execute the calculator calls.
+    #     name="replace_source_file",  # By default, the function name is used as the tool name.
+    #     description="A tool that can replace the content of **SOURCE** file. "
+    #                 "This tool is **NOT allowed to modify the test files**",  # A description of the tool.
+    # )
     register_function(
         partial(_project.content_of_method),
         caller=assistant,  # The assistant agent can suggest calls to the calculator.
@@ -321,9 +439,9 @@ def test_llm(_project: Project) -> None:
     autogen.runtime_logging.start(logger_type="file", config={"filename": f"{uuid.uuid4()}.log"})
     chat_result = user_proxy.initiate_chat(
         assistant,
-        message="Fix the bug in this project. Your goal is to pass the tests. Now the failed test(s) is "
+        message="Locate the bug in this project. Now the failed test(s) is "
                 + str(project.trigger_test_methods()),
-        max_turns=50
+        max_turns=10
     )
     autogen.runtime_logging.stop()
     print(chat_result)
@@ -379,6 +497,7 @@ if __name__ == '__main__':
     load_env()
 
     test_llm(project)
+    # test_group_chat(project)
     # test_command(project)
     # test_run_test(project)
     # test_method(project)
