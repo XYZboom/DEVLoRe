@@ -53,3 +53,13 @@ def trigger_test_stacktrace(_pid, _bid):
             continue
         _result.append(_line)
     return "\n".join(_result)
+
+
+def checkout(_pid, _bid, _path, _print_stdout=False, _print_stderr=False):
+    _process = subprocess.Popen([D4J_EXEC, "checkout", "-p", _pid, "-v", f"{_bid}b", "-w", _path],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    _out, _err = _process.communicate()
+    if _print_stdout:
+        print(_out.decode())
+    if _err and _print_stderr:
+        print(_err.decode())
