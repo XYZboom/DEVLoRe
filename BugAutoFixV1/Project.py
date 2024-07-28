@@ -77,11 +77,15 @@ class Project:
         raise FileNotFoundError(f"No such file {file}")
 
     def content_of_file(self, file_path: Annotated[str, "The path of the file to be opened. e.g. "
-                                                        "org/jetbrains/java/PsiClass.java"]
+                                                        "org/jetbrains/java/PsiClass.java"],
+                        contain_line_number: Annotated[bool, "True if the return string contains line number"] = False,
                         ) -> str:
         file_path = self._find_file(file_path)
         with open(file_path, "r") as f:
-            return f.read()
+            lines = f.readlines()
+        if contain_line_number:
+            lines = [str(line_num + 1) + "|" + line for line_num, line in enumerate(lines)]
+        return "".join(lines)
 
     def content_of_method(
             self,
@@ -343,8 +347,8 @@ def test_llm(_project: Project) -> None:
     from autogen import ConversableAgent
 
     llm_config = {"config_list": [{"model": "gpt-3.5-turbo", "api_key": os.environ["OPENAI_API_KEY"],
-                                     "price": [0.00365, 0.0146]}],
-                    "cache_seed": None}
+                                   "price": [0.00365, 0.0146]}],
+                  "cache_seed": None}
 
     # Let's first define the assistant agent that suggests tool calls.
     assistant = ConversableAgent(
@@ -453,6 +457,53 @@ def test_llm(_project: Project) -> None:
     # print(chat_result)
 
 
+def test_llm2(_project: Project):
+    import Chat
+    chat = Chat.Chat("gpt-3.5-turbo-1106", "You are a software development engineer.")
+    localize_message_template = """Review the following files, test case(s), and exception that occurs when doing the test, 
+and provide a set of locations that need to be edited to fix the issue. The locations can be specified as class 
+names, method names, or exact line numbers that require modification.
+### Files ###
+{files_contents}
+### Failed Test Case(s) and exception ###
+{testcase_contents}
+Please provide the class name, method name, or the exact line numbers that need to be edited.
+### Examples:
+```
+path/to/ClassA.java
+line: 10
+class: ClassA
+line: 51
+
+path/to/ClassB.java
+method: ClassB.method0
+line: 12
+
+path/to/ClassC.java
+method: ClassC.method1
+line: 24
+line: 241
+```
+
+Return just the location(s)
+"""
+    file_content_template = """### {file_name}
+```java
+{file_content}
+```
+"""
+    files_contents = [
+        file_content_template.format(
+            file_name=_file_name, file_content=_project.content_of_file(_file_name, True)
+        ) for _file_name in _project.all_files()
+    ]
+    localize_message = localize_message_template.format(
+        files_contents="\n".join(files_contents),
+        testcase_contents=_project.failed_test()
+    )
+    print(localize_message)
+
+
 def test_command(_project: Project) -> None:
     _project.command("-h")
 
@@ -502,7 +553,8 @@ if __name__ == '__main__':
 
     load_env()
 
-    test_llm(project)
+    # test_llm(project)
+    test_llm2(project)
     # test_group_chat(project)
     # test_command(project)
     # test_run_test(project)

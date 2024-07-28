@@ -60,12 +60,12 @@ user_proxy = ConversableAgent(
 )
 
 # Register the tool signature with the assistant agent.
-assistant.register_for_llm(name="calculator", description="A calculator tool that accepts nested expression as input")(
-    calculator
-)
-
+# assistant.register_for_llm(name="calculator", description="A calculator tool that accepts nested expression as input")(
+#     calculator
+# )
+#
 # Register the tool function with the user proxy agent.
-user_proxy.register_for_execution(name="calculator")(calculator)
+# user_proxy.register_for_execution(name="calculator")(calculator)
 
 from autogen import register_function
 

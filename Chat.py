@@ -56,6 +56,8 @@ class Chat:
 
     def __do_chat(self, num_choice) -> Union[str, List[str]]:
         __completion = self._client.chat.completions.create(model=self._model, messages=self._messages, n=num_choice)
+        if __completion.choices is None:
+            raise Exception(__completion)
         if num_choice == 1:
             __message = __completion.choices[0].message
             # noinspection PyTypeChecker
