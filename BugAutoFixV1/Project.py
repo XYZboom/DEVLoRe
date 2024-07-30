@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import sys
 import uuid
@@ -32,6 +33,10 @@ DEBUG_LOG_NAME = "bugDetect.log"
 
 
 class Project:
+    SEARCH_KEY = "search"
+    REPLACE_KEY = "replace"
+    CLASS_KEY = "class"
+
     def __init__(self, base_dir: str):
         self.base_dir = base_dir
         self._files = []
@@ -41,8 +46,8 @@ class Project:
             raise FileNotFoundError("No defects4j.build.properties file found")
         self._d4j_configs = dotenv.dotenv_values(_d4j_file_name)
         self._relevant_classes = self._d4j_configs.get(D4J_RELEVANT_KEY).split(",")
-        self._src_path = self._d4j_configs.get(D4J_SRC_PATH_KEY)
-        self._test_path = self._d4j_configs.get(D4J_TEST_PATH_KEY)
+        self._src_path = self._d4j_configs.get(D4J_SRC_PATH_KEY).removeprefix("./")
+        self._test_path = self._d4j_configs.get(D4J_TEST_PATH_KEY).removeprefix("./")
         self._trigger_test_methods = self._d4j_configs.get(D4J_TRIGGER_KEY)
         self._trigger_tests = [self._trigger_test_methods.split("::")[0]
                                for _test_method in self._trigger_test_methods.split(",")]
@@ -57,30 +62,62 @@ class Project:
             for f in files:
                 if f.endswith(".java"):
                     _f_path = os.path.join(path.replace(base_dir, ''), f)
-                    _class_name = (_f_path.removesuffix(".java").removesuffix("/").removeprefix("/")
-                                   .removeprefix(self._src_path).removeprefix(self._test_path)
-                                   .removesuffix("/").removeprefix("/")
-                                   .replace("/", "."))
+                    _class_name = _f_path.removesuffix(".java").removesuffix("/").removeprefix("/")
+                    _class_name = re.sub(f"^.*?{self._src_path}", "", _class_name)
+                    _class_name = re.sub(f"^.*?{self._test_path}", "", _class_name)
+                    _class_name = _class_name.removesuffix("/").removeprefix("/").replace("/", ".")
                     if _class_name in self._relevant_classes or _class_name in self._trigger_tests:
                         self._files.append(_f_path)
         if len(self._files) == 0:
             raise Exception(f"No files found in {base_dir}")
 
+    def apply_replace_list(self, _replace_list: List[Dict[Literal["replace", "search", "class"], str]]):
+        for _replace in _replace_list:
+            self.apply_replace(_replace)
+
+    def apply_replace(self, _replace: Dict[str, str]):
+        _file = self.find_file(_replace[self.CLASS_KEY].replace(".", "/") + ".java")
+        with open(_file, "r") as _f:
+            _ori_lines = _f.read().splitlines()
+        _line_number_ori = len(_ori_lines)
+        _replace_line_index = -1
+        _replace_lines = _replace[self.SEARCH_KEY].splitlines()
+        for line_index, _ in enumerate(_ori_lines[:-len(_replace_lines)]):
+            #                                             ^^^^^^^^^^^^^^^^^^^^
+            # if remain lines count > replace lines count, no more lines could be replaced.
+            found = True
+
+            for _ori_line, _replace_line in zip(_ori_lines[line_index:line_index + len(_replace_lines)],
+                                                _replace_lines):
+                _trimmed_replace_line = _replace_line.strip()
+                _trimmed_ori_line = _ori_line.strip()
+                if _trimmed_replace_line != _trimmed_ori_line:
+                    found = False
+            if found:
+                _replace_line_index = line_index
+                break
+        if _replace_line_index == -1:
+            raise Exception("No matching lines found")
+        _ori_lines[_replace_line_index + 1:_replace_line_index + len(_replace_lines)] = []
+        _ori_lines[_replace_line_index] = _replace[self.REPLACE_KEY] + "\n"
+        with open(_file, "w") as _f:
+            _f.write("\n".join(_ori_lines))
+
     def trigger_test_methods(self):
         return self._trigger_test_methods
 
-    def _find_file(self, file: str) -> str:
+    def find_file(self, file: str) -> str:
         for f_name in self._files:
             if f_name.endswith(file) or f_name.replace("/java", "").endswith(file):
                 file_path = self.base_dir + f_name if f_name.startswith("/") else os.path.join(self.base_dir, f_name)
-                return file_path
+                return os.path.abspath(file_path)
         raise FileNotFoundError(f"No such file {file}")
 
     def content_of_file(self, file_path: Annotated[str, "The path of the file to be opened. e.g. "
                                                         "org/jetbrains/java/PsiClass.java"],
                         contain_line_number: Annotated[bool, "True if the return string contains line number"] = False,
                         ) -> str:
-        file_path = self._find_file(file_path)
+        file_path = self.find_file(file_path)
         with open(file_path, "r") as f:
             lines = f.readlines()
         if contain_line_number:
@@ -122,7 +159,7 @@ class Project:
     ) -> str:
         if "test" in file_path or "Test" in file_path:
             raise Exception("Test files can not be modified")
-        file_path = self._find_file(file_path)
+        file_path = self.find_file(file_path)
         with open(file_path, "r+") as file:
             file_contents = file.readlines()
             file_contents[start_line - 1: end_line] = [new_code + "\n"]
@@ -136,7 +173,7 @@ class Project:
                      new_content: Annotated[str, "The content of the modified file."]) -> str:
         if "test" in file_path or "Test" in file_path:
             raise Exception("Test files can not be modified")
-        file_path = self._find_file(file_path)
+        file_path = self.find_file(file_path)
         with open(file_path, "r") as f:
             text = f.read()
         text.replace(old_content, new_content)
