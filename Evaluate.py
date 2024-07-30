@@ -3,6 +3,7 @@ import os
 import re
 from tqdm import tqdm
 import traceback
+import signal
 
 import defects4j_utils
 
@@ -61,6 +62,7 @@ if __name__ == '__main__':
     from BugAutoFixV1.Project import Project
     import threading
     import tempfile
+    import eventlet
     import concurrent.futures
 
     _repair_path = f"{OUTPUT_PATH}/Repair"
@@ -121,10 +123,16 @@ if __name__ == '__main__':
                     # for debug propose
                     extract_replace(_raw_response=_repair)
                     continue
-                _run_test_result = project.run_test()
-                if _run_test_result == 'success':
-                    _success_repair = _replace_result
-                    break
+                print("apply_replace_list finished")
+                eventlet.monkey_patch()
+                try:
+                    with eventlet.Timeout(300):
+                        _run_test_result = project.run_test()
+                        if _run_test_result == 'success':
+                            _success_repair = _replace_result
+                            break
+                except eventlet.Timeout:
+                    print("execution time out")
         if _success_repair:
             print(f"success {_version_str}")
             with open(_my_evaluate_path, "w") as _f:
