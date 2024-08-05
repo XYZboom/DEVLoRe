@@ -63,3 +63,30 @@ def checkout(_pid, _bid, _path, _print_stdout=False, _print_stderr=False):
         print(_out.decode())
     if _err and _print_stderr:
         print(_err.decode())
+
+
+__ori_d4j = {
+    'Chart': list(range(1, 26 + 1)),
+    'Cli': list(range(1, 5 + 1)) + list(range(7, 40 + 1)),
+    'Closure': list(range(1, 62 + 1)) + list(range(64, 92 + 1)) + list(range(94, 176 + 1)),
+    'Codec': list(range(1, 18 + 1)),
+    'Collections': list(range(25, 28 + 1)),
+    'Compress': list(range(1, 47 + 1)),
+    'Csv': list(range(1, 16 + 1)),
+    'Gson': list(range(1, 18 + 1)),
+    'JacksonCore': list(range(1, 26 + 1)),
+    'JacksonDatabind': list(range(1, 112 + 1)),
+    'JacksonXml': list(range(1, 6 + 1)),
+    'Jsoup': list(range(1, 93 + 1)),
+    'JxPath': list(range(1, 22 + 1)),
+    'Lang': [1] + list(range(3, 65 + 1)),
+    'Math': list(range(1, 106 + 1)),
+    'Mockito': list(range(1, 38 + 1)),
+    'Time': list(range(1, 20 + 1)) + list(range(22, 27 + 1)),
+}
+
+
+def is_ori_d4j(_pid, _bid):
+    if _pid in __ori_d4j:
+        return int(_bid) in __ori_d4j[_pid]
+    return False

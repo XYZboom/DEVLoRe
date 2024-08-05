@@ -3,7 +3,7 @@ import os
 import re
 from tqdm import tqdm
 import traceback
-import signal
+import subprocess
 
 import defects4j_utils
 
@@ -58,15 +58,32 @@ def extract_replace(_raw_response):
     return _result
 
 
+def diff(_ori, _dst, _patch_path):
+    with open(_patch_path, "w") as _f:
+        _process = subprocess.Popen(["git", "diff", _ori, _dst],
+                                    stdout=_f, stderr=subprocess.PIPE)
+    _out, _err = _process.communicate()
+    if _err:
+        print(_err.decode())
+
+
 if __name__ == '__main__':
     from BugAutoFixV1.Project import Project
     import threading
     import tempfile
     import eventlet
-    import concurrent.futures
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--patch-only", help="output git patch only", default=False)
+    parser.add_argument("--patch-valid", help="patch only result that passed the test", default=True)
+    parser.add_argument("--patch-dir", help="output git patch directory", default=False)
+    args = parser.parse_args()
 
     _repair_path = f"{OUTPUT_PATH}/Repair"
     _evaluate_path = f"{OUTPUT_PATH}/Evaluate"
+    _patch_path = args.patch_dir
+    _patch_valid = args.patch_valid
     if not os.path.exists(_evaluate_path):
         os.mkdir(_evaluate_path)
 
@@ -81,12 +98,50 @@ if __name__ == '__main__':
         _version_str = f"{pid}_{bid}b"
         _my_evaluate_path = f"{_evaluate_path}/{_version_str}.json"
         if os.path.exists(_my_evaluate_path):
-            print(f"{_version_str} exists")
+            if _patch_path is not None and not _patch_valid:
+                print(f"{_version_str} exists")
+                return
+
+            if os.path.getsize(_my_evaluate_path) == 0:
+                print(f"{_version_str} invalid")
+                return
+
+            def do_patch():
+                _patch_out_path = f"{_patch_path}/{_version_str}.patch"
+                if os.path.exists(_patch_out_path):
+                    print(f"patch exists: {_version_str}")
+                    return
+                _write_dir = tempfile.TemporaryDirectory()
+                _copy_dir = tempfile.TemporaryDirectory()
+                with open(_my_evaluate_path, "r") as _f:
+                    _eval_result = json.load(_f)
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    print(f"checkout {_version_str}")
+                    defects4j_utils.checkout(pid, bid, temp_dir)
+                    if not os.path.exists(temp_dir):
+                        print(f"checkout failed: {_version_str}")
+                        return
+                    try:
+                        project = Project(temp_dir)
+                    except Exception as e:
+                        print(f"create project failed: {_version_str}")
+                        return
+                    project.apply_replace_list(_eval_result)
+                    with open(_patch_out_path, "w") as _f1:
+                        _process = subprocess.Popen(["git", "diff", ],
+                                                    stdout=_f1, stderr=subprocess.PIPE, cwd=temp_dir)
+                        _out, _err = _process.communicate()
+                        if _err:
+                            print(_err.decode())
+
+            if _patch_valid:
+                do_patch()
+                return
+        elif args.patch_only:
+            print(f"{_version_str} not found, patch only now.")
             return
         _my_repair_path = f"{_repair_path}/{_version_str}.json"
         if not os.path.isfile(_my_repair_path):
-            return
-        if os.path.exists(_my_evaluate_path):
             return
         with all_count_lock:
             all_count += 1
