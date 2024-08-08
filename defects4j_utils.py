@@ -55,6 +55,18 @@ def trigger_test_stacktrace(_pid, _bid):
     return "\n".join(_result)
 
 
+def patch_content(_pid, _bid):
+    _projects_path = os.path.abspath(os.path.join(D4J_EXEC, f"../../projects/{_pid}"))
+    if not os.path.exists(_projects_path):
+        return None
+    _patch_file = os.path.join(_projects_path, f"patches/{_bid}.src.patch")
+    if not os.path.exists(_patch_file):
+        return None
+    with open(_patch_file, "r") as f:
+        _content = f.read()
+    return _content
+
+
 def checkout(_pid, _bid, _path, _print_stdout=False, _print_stderr=False):
     _process = subprocess.Popen([D4J_EXEC, "checkout", "-p", _pid, "-v", f"{_bid}b", "-w", _path],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
