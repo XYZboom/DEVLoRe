@@ -189,19 +189,24 @@ class Project:
     def all_files(self) -> List[str]:
         return self._files
 
-    def run_test(self):
+    def run_test(self, delete_last_log=True, single_test: str = None):
         # noinspection PyBroadException
         try:
             os.remove(os.path.join(self.base_dir, D4J_FAILING_TEST))
         except Exception as _:
             pass
-        # noinspection PyBroadException
-        try:
-            os.remove(os.path.join(self.base_dir, DEBUG_LOG_NAME))
-        except Exception as _:
-            pass
-        result = subprocess.run(f"{D4J_EXEC} test -r", shell=True,
-                                stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.base_dir)
+        if delete_last_log:
+            # noinspection PyBroadException
+            try:
+                os.remove(os.path.join(self.base_dir, DEBUG_LOG_NAME))
+            except Exception as _:
+                pass
+        if single_test:
+            result = subprocess.run(f"{D4J_EXEC} test -t {single_test}", shell=True,
+                                    stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.base_dir)
+        else:
+            result = subprocess.run(f"{D4J_EXEC} test -r", shell=True,
+                                    stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.base_dir)
         stdout = result.stdout.decode("utf-8")
         stderr = result.stderr.decode("utf-8")
         if stdout == "":
@@ -237,10 +242,21 @@ class Project:
                 _result_lines.append(line)
         return "\n".join(_result_lines)
 
+    def raw_debug_info(self):
+        _base_debug_file = os.path.join(self.base_dir, DEBUG_LOG_NAME)
+        with open(_base_debug_file, "r") as f:
+            _result = f.read()
+        if os.path.getsize(_base_debug_file) < 5 * 1024:
+            _last_debug_file = os.path.join(self.base_dir, DEBUG_LOG_NAME + ".1")
+            if os.path.exists(_last_debug_file):
+                with open(_last_debug_file, "r") as f:
+                    _result += f.read()
+        return _result
+
     def debug_info(
             self, test_class_name: Annotated[str, "The test class name. "
-                                                  "e.g. org.apache.commons.lang3.math.NumberUtilsTest"],
-            method_name: Annotated[str, "The test method name. e.g. testMethod"],
+                                                  "e.g. org.apache.commons.lang3.math.NumberUtilsTest"] = None,
+            method_name: Annotated[str, "The test method name. e.g. testMethod"] = None,
             start_line: Annotated[int, "The line in specified method that debug info start."
                                        " -1 means start at the beginning of the method."] = -1,
             end_line: Annotated[int, "The line in specified method that debug info end. "
@@ -252,6 +268,9 @@ class Project:
         _started = False
         for line in lines:
             if line.startswith("----------") and line.endswith("----------"):
+                continue
+            if test_class_name is None or method_name is None:
+                lines.append(line)
                 continue
             if line.startswith(f"{test_class_name}:{method_name}"):
                 if start_line != -1:

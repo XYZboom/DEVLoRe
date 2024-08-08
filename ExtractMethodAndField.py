@@ -9,11 +9,6 @@ from dotenv import load_dotenv, find_dotenv
 
 import defects4j_utils
 
-_ = load_dotenv(find_dotenv())
-EXTRACT_JAR_PATH = os.environ.get("EXTRACT_JAR_PATH")
-D4J_JSON_PATH = os.environ.get("D4J_JSON_PATH")
-OUTPUT_PATH = os.environ.get("OUTPUT_PATH")
-
 
 def extract_buggy_method(_path, _members, _output):
     _process = subprocess.Popen(["java", "-jar", EXTRACT_JAR_PATH,
@@ -36,6 +31,11 @@ def handle_raw_response(_raw_response):
 
 if __name__ == '__main__':
     import tempfile
+
+    _ = load_dotenv(find_dotenv())
+    EXTRACT_JAR_PATH = os.environ.get("EXTRACT_JAR_PATH")
+    D4J_JSON_PATH = os.environ.get("D4J_JSON_PATH")
+    OUTPUT_PATH = os.environ.get("OUTPUT_PATH")
 
     _finished_record = f"{D4J_JSON_PATH}/second_step.txt"
     if not os.path.exists(_finished_record):

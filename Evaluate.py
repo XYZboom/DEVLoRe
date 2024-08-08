@@ -73,6 +73,7 @@ if __name__ == '__main__':
     import tempfile
     import eventlet
     import argparse
+    import concurrent.futures
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--patch-only", help="output git patch only", default=False)
