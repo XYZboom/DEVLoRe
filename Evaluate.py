@@ -4,6 +4,8 @@ import re
 from tqdm import tqdm
 import traceback
 import subprocess
+import tempfile
+from BugAutoFixV1.Project import Project
 
 import defects4j_utils
 
@@ -16,6 +18,7 @@ OUTPUT_PATH = os.environ.get("OUTPUT_PATH")
 EXTRACT_JAR_PATH = os.environ.get("EXTRACT_JAR_PATH")
 D4J_TRIGGER_KEY = "d4j.tests.trigger"
 D4J_RELEVANT_KEY = "d4j.classes.relevant"
+D4J_PROPERTIES_FILE = "defects4j.build.properties"
 
 SEARCH_KEY = "search"
 REPLACE_KEY = "replace"
@@ -67,10 +70,38 @@ def diff(_ori, _dst, _patch_path):
         print(_err.decode())
 
 
+def do_patch(pid, bid, _evaluate_path, _patch_dir):
+    _version_str = f"{pid}_{bid}b"
+    _patch_out_path = f"{_patch_dir}/{_version_str}.patch"
+    if os.path.exists(_patch_out_path):
+        print(f"patch exists: {_version_str}")
+        return
+    _write_dir = tempfile.TemporaryDirectory()
+    _copy_dir = tempfile.TemporaryDirectory()
+    with open(_evaluate_path, "r") as _f:
+        _eval_result = json.load(_f)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        print(f"checkout {_version_str}")
+        defects4j_utils.checkout(pid, bid, temp_dir, _print_stderr=False)
+        if not os.path.exists(os.path.join(temp_dir, D4J_PROPERTIES_FILE)):
+            print(f"checkout failed: {_version_str}")
+            return
+        try:
+            project = Project(temp_dir)
+        except Exception as e:
+            print(f"create project failed: {_version_str}")
+            return
+        project.apply_replace_list(_eval_result)
+        with open(_patch_out_path, "w") as _f1:
+            _process = subprocess.Popen(["git", "diff", ],
+                                        stdout=_f1, stderr=subprocess.PIPE, cwd=temp_dir)
+            _out, _err = _process.communicate()
+            if _err:
+                print(_err.decode())
+
+
 if __name__ == '__main__':
-    from BugAutoFixV1.Project import Project
     import threading
-    import tempfile
     import eventlet
     import argparse
     import concurrent.futures
@@ -79,12 +110,18 @@ if __name__ == '__main__':
     parser.add_argument("--patch-only", help="output git patch only", default=False)
     parser.add_argument("--patch-valid", help="patch only result that passed the test", default=True)
     parser.add_argument("--patch-dir", help="output git patch directory", default=False)
+    parser.add_argument("--add-debug-info", help="add debug info", default=False)
     args = parser.parse_args()
+    _add_debug = args.add_debug_info
 
-    _repair_path = f"{OUTPUT_PATH}/Repair"
-    _evaluate_path = f"{OUTPUT_PATH}/Evaluate"
+    if _add_debug:
+        _repair_path = f"{OUTPUT_PATH}/RepairDebug"
+        _evaluate_path = f"{OUTPUT_PATH}/EvaluateDebug"
+    else:
+        _repair_path = f"{OUTPUT_PATH}/Repair"
+        _evaluate_path = f"{OUTPUT_PATH}/Evaluate"
     _patch_path = args.patch_dir
-    _patch_valid = args.patch_valid
+    _patch_valid = False if args.patch_valid == 'False' else True
     if not os.path.exists(_evaluate_path):
         os.mkdir(_evaluate_path)
 
@@ -106,37 +143,8 @@ if __name__ == '__main__':
             if os.path.getsize(_my_evaluate_path) == 0:
                 print(f"{_version_str} invalid")
                 return
-
-            def do_patch():
-                _patch_out_path = f"{_patch_path}/{_version_str}.patch"
-                if os.path.exists(_patch_out_path):
-                    print(f"patch exists: {_version_str}")
-                    return
-                _write_dir = tempfile.TemporaryDirectory()
-                _copy_dir = tempfile.TemporaryDirectory()
-                with open(_my_evaluate_path, "r") as _f:
-                    _eval_result = json.load(_f)
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    print(f"checkout {_version_str}")
-                    defects4j_utils.checkout(pid, bid, temp_dir)
-                    if not os.path.exists(temp_dir):
-                        print(f"checkout failed: {_version_str}")
-                        return
-                    try:
-                        project = Project(temp_dir)
-                    except Exception as e:
-                        print(f"create project failed: {_version_str}")
-                        return
-                    project.apply_replace_list(_eval_result)
-                    with open(_patch_out_path, "w") as _f1:
-                        _process = subprocess.Popen(["git", "diff", ],
-                                                    stdout=_f1, stderr=subprocess.PIPE, cwd=temp_dir)
-                        _out, _err = _process.communicate()
-                        if _err:
-                            print(_err.decode())
-
             if _patch_valid:
-                do_patch()
+                do_patch(pid, bid, _my_evaluate_path, _patch_path)
                 return
         elif args.patch_only:
             print(f"{_version_str} not found, patch only now.")
@@ -199,18 +207,18 @@ if __name__ == '__main__':
             print(f"fail {_version_str}")
             open(_my_evaluate_path, "w").close()
 
-
-    # for pid, bid in defects4j_utils.d4j_pids_bids():
-    #     evaluate(pid, bid)
-    with concurrent.futures.ThreadPoolExecutor(
-            max_workers=8
-    ) as executor:
-        futures = [
-            executor.submit(
-                evaluate,
-                pid,
-                bid
-            )
-            for pid, bid in defects4j_utils.d4j_pids_bids()
-        ]
-        concurrent.futures.wait(futures)
+    _all_pd = list(defects4j_utils.d4j_pids_bids())
+    for pid, bid in tqdm(_all_pd, desc="Evaluate"):
+        evaluate(pid, bid)
+    # with concurrent.futures.ThreadPoolExecutor(
+    #         max_workers=4
+    # ) as executor:
+    #     futures = [
+    #         executor.submit(
+    #             evaluate,
+    #             pid,
+    #             bid
+    #         )
+    #         for pid, bid in defects4j_utils.d4j_pids_bids()
+    #     ]
+    #     concurrent.futures.wait(futures)

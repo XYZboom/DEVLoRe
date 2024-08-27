@@ -21,6 +21,7 @@ The locations must be specified as line number in class.
 {skeleton_of_classes}
 ### Failed Test Case(s) and exception ###
 {failed_tests}
+{debug_info}
 
 Please provide class name and line number that need to be edited.
 ### Examples:
@@ -54,14 +55,20 @@ if __name__ == '__main__':
     parser.add_argument("--add-debug-info", help="add debug info", default=False)
     args = parser.parse_args()
 
-    _finished_path = f"{D4J_JSON_PATH}/second_step_llm.txt"
+    _add_debug = args.add_debug_info
+    if _add_debug:
+        _finished_path = f"{D4J_JSON_PATH}/second_step_llm_debug.txt"
+    else:
+        _finished_path = f"{D4J_JSON_PATH}/second_step_llm.txt"
 
     if not os.path.exists(_finished_path):
         open(_finished_path, "w").close()
     with open(_finished_path, "r") as f:
         finished = f.read().splitlines()
-
-    _locate_line_path = f"{OUTPUT_PATH}/LocateLine"
+    if _add_debug:
+        _locate_line_path = f"{OUTPUT_PATH}/LocateLineDebug"
+    else:
+        _locate_line_path = f"{OUTPUT_PATH}/LocateLine"
 
     if not os.path.exists(_locate_line_path):
         os.makedirs(_locate_line_path)
@@ -74,7 +81,17 @@ if __name__ == '__main__':
         _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method/{pid}_{bid}b.json"
         _failed_test_path = f"{D4J_JSON_PATH}/result_failed_tests_method_content/{pid}_{bid}b.json"
         if not os.path.exists(_buggy_method_path) or not os.path.exists(_failed_test_path):
+            print(f"buggy method or failed test of {pid}_{bid}b not exists.")
             return
+        _debug_path = f"{OUTPUT_PATH}/DebugInfo/{pid}_{bid}b.txt"
+        if not os.path.exists(_debug_path) and _add_debug:
+            print(f"debug info not exists when --add-debug-info is True. {pid}_{bid}b")
+            return
+        _debug_info = ""
+        if _add_debug:
+            with open(_debug_path, "r") as _f:
+                _debug_info = "### Debug info ###\n"
+                _debug_info += _f.read()
         print(f"start {pid}_{bid}b")
         chat = Chat.Chat("gpt-4o-mini", SYS_PROMPT)
         with open(_buggy_method_path, mode="r") as _f:
@@ -89,7 +106,8 @@ if __name__ == '__main__':
             return
         user_prompt = LocateLinePrompt.format(
             skeleton_of_classes=_skeleton_of_classes,
-            failed_tests=_failed_tests
+            failed_tests=_failed_tests,
+            debug_info=_debug_info,
         )
         try:
             messages = chat.chat(user_prompt, 10)

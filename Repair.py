@@ -64,15 +64,27 @@ if __name__ == '__main__':
     import argparse
     import concurrent.futures
 
-    _finished_path = f"{D4J_JSON_PATH}/repair.txt"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--add-debug-info", help="add debug info", default=False)
+    args = parser.parse_args()
+
+    _add_debug = args.add_debug_info
+    if _add_debug:
+        _finished_path = f"{D4J_JSON_PATH}/repair_debug_info.txt"
+    else:
+        _finished_path = f"{D4J_JSON_PATH}/repair.txt"
 
     if not os.path.exists(_finished_path):
         open(_finished_path, "w").close()
     with open(_finished_path, "r") as f:
         finished = f.read().splitlines()
 
-    _locate_line_prefix = f"{OUTPUT_PATH}/LocateLine"
-    _repair_path = f"{OUTPUT_PATH}/Repair"
+    if _add_debug:
+        _locate_line_prefix = f"{OUTPUT_PATH}/LocateLineDebug"
+        _repair_path = f"{OUTPUT_PATH}/RepairDebug"
+    else:
+        _locate_line_prefix = f"{OUTPUT_PATH}/LocateLine"
+        _repair_path = f"{OUTPUT_PATH}/Repair"
 
     if not os.path.exists(_repair_path):
         os.makedirs(_repair_path)
