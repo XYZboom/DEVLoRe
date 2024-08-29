@@ -21,6 +21,7 @@ The locations must be specified as method names or field names.
 {skeleton_of_classes}
 ### Failed Test Case(s) and exception ###
 {failed_tests}
+{issue_content}
 
 Please provide method names or field names that need to be edited.
 ### Examples:
@@ -41,23 +42,37 @@ SYS_PROMPT = "You are a software development engineer"
 if __name__ == '__main__':
     import Chat
     import json
+    import argparse
     import concurrent.futures
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--add-issue-info", help="add issue info", default=False)
+    args = parser.parse_args()
+    _add_issue = args.add_issue_info
 
     if not os.path.exists(f"{D4J_JSON_PATH}/first_step_llm.txt"):
         open(f"{D4J_JSON_PATH}/first_step_llm.txt", "w").close()
     with open(f"{D4J_JSON_PATH}/first_step_llm.txt", "r") as f:
         finished = f.read().splitlines()
 
-    if not os.path.exists(f"{OUTPUT_PATH}/LocateMethod"):
-        os.makedirs(f"{OUTPUT_PATH}/LocateMethod")
+    if _add_issue:
+        _output_path = f"{OUTPUT_PATH}/LocateMethodIssue"
+    else:
+        _output_path = f"{OUTPUT_PATH}/LocateMethod"
+
+    if not os.path.exists(_output_path):
+        os.makedirs(_output_path)
 
     def do_extract(pid, bid):
-        if f"{pid}_{bid}b" in finished or os.path.exists(f"{OUTPUT_PATH}/LocateMethod/{pid}_{bid}b.json"):
+        if os.path.exists(f"{_output_path}/{pid}_{bid}b.json"):
             print(f"{pid}_{bid}b exists.")
             return
         _skeleton_path = f"{D4J_JSON_PATH}/result_skeleton/{pid}_{bid}b.json"
         _failed_test_path = f"{D4J_JSON_PATH}/result_failed_tests_method_content/{pid}_{bid}b.json"
-        if not os.path.exists(_skeleton_path) or not os.path.exists(_failed_test_path):
+        _issue_info_path = f"{OUTPUT_PATH}/issue_content/{pid}_{bid}.txt"
+        if not os.path.exists(_skeleton_path) or not os.path.exists(_failed_test_path)\
+                or (not os.path.exists(_issue_info_path) and _add_issue):
+            print(f"not enough info for {pid}_{bid}b")
             return
         print(f"start {pid}_{bid}b")
         chat = Chat.Chat("gpt-4o-mini", SYS_PROMPT)
@@ -71,9 +86,20 @@ if __name__ == '__main__':
         if not _failed_tests:
             print(f"no failed test in {pid}_{bid}b")
             return
+        if _add_issue:
+            # noinspection PyBroadException
+            try:
+                with open(_issue_info_path, "r") as _f:
+                    issue_content = "### issue info ###\n"
+                    issue_content += _f.read()
+            except:
+                issue_content = ""
+        else:
+            issue_content = ""
         user_prompt = LocateMethodPrompt.format(
             skeleton_of_classes=_skeleton_of_classes,
-            failed_tests=_failed_tests
+            failed_tests=_failed_tests,
+            issue_content=issue_content
         )
         try:
             message = chat.chat(user_prompt)
@@ -86,7 +112,7 @@ if __name__ == '__main__':
             "response": message,
         }
         print(f"finish chat in {pid}_{bid}b")
-        with open(f"{OUTPUT_PATH}/LocateMethod/{pid}_{bid}b.json", "w") as _f:
+        with open(f"{_output_path}/{pid}_{bid}b.json", "w") as _f:
             json.dump(_result, _f)
         with open(f"{D4J_JSON_PATH}/first_step_llm.txt", "a") as _f:
             _f.write(f"{pid}_{bid}b\n")
@@ -96,7 +122,7 @@ if __name__ == '__main__':
     # for pid, bid in defects4j_utils.d4j_pids_bids():
     #     do_extract(pid, bid)
     with concurrent.futures.ThreadPoolExecutor(
-            max_workers=32
+            max_workers=64
     ) as executor:
         futures = [
             executor.submit(

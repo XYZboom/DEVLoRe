@@ -84,17 +84,17 @@ if __name__ == '__main__':
             _f.write(f"{pid}_{bid}b\n")
         print(f"{pid}_{bid}b done.")
 
-    for pid, bid in defects4j_utils.d4j_pids_bids():
-        do_extract(pid, bid)
-    # with concurrent.futures.ThreadPoolExecutor(
-    #         max_workers=32
-    # ) as executor:
-    #     futures = [
-    #         executor.submit(
-    #             do_extract,
-    #             pid,
-    #             bid
-    #         )
-    #         for pid, bid in defects4j_utils.d4j_pids_bids()
-    #     ]
-    #     concurrent.futures.wait(futures)
+    # for pid, bid in defects4j_utils.d4j_pids_bids():
+    #     do_extract(pid, bid)
+    with concurrent.futures.ThreadPoolExecutor(
+            max_workers=64
+    ) as executor:
+        futures = [
+            executor.submit(
+                do_extract,
+                pid,
+                bid
+            )
+            for pid, bid in defects4j_utils.d4j_pids_bids()
+        ]
+        concurrent.futures.wait(futures)

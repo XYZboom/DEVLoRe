@@ -66,9 +66,11 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--add-debug-info", help="add debug info", default=False)
+    parser.add_argument("--add-issue-info", help="add issue info", default=False)
     args = parser.parse_args()
 
     _add_debug = args.add_debug_info
+    _add_issue = args.add_issue_info
     if _add_debug:
         _finished_path = f"{D4J_JSON_PATH}/repair_debug_info.txt"
     else:
@@ -82,6 +84,9 @@ if __name__ == '__main__':
     if _add_debug:
         _locate_line_prefix = f"{OUTPUT_PATH}/LocateLineDebug"
         _repair_path = f"{OUTPUT_PATH}/RepairDebug"
+    elif _add_issue:
+        _locate_line_prefix = f"{OUTPUT_PATH}/LocateLineIssueMethod"
+        _repair_path = f"{OUTPUT_PATH}/RepairIssueMethod"
     else:
         _locate_line_prefix = f"{OUTPUT_PATH}/LocateLine"
         _repair_path = f"{OUTPUT_PATH}/Repair"
@@ -94,7 +99,10 @@ if __name__ == '__main__':
         if os.path.exists(f"{_repair_path}/{pid}_{bid}b.json"):
             print(f"{pid}_{bid}b exists.")
             return
-        _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method/{pid}_{bid}b.json"
+        if _add_issue:
+            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue_locate_method/{pid}_{bid}b.json"
+        else:
+            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method/{pid}_{bid}b.json"
         _failed_test_path = f"{D4J_JSON_PATH}/result_failed_tests_method_content/{pid}_{bid}b.json"
         _locate_line_path = f"{_locate_line_prefix}/{pid}_{bid}b.json"
         if not os.path.exists(_buggy_method_path) or not os.path.exists(_failed_test_path)\

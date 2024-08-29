@@ -111,12 +111,17 @@ if __name__ == '__main__':
     parser.add_argument("--patch-valid", help="patch only result that passed the test", default=True)
     parser.add_argument("--patch-dir", help="output git patch directory", default=False)
     parser.add_argument("--add-debug-info", help="add debug info", default=False)
+    parser.add_argument("--add-issue-info", help="add issue info", default=False)
     args = parser.parse_args()
     _add_debug = args.add_debug_info
+    _add_issue = args.add_issue_info
 
     if _add_debug:
         _repair_path = f"{OUTPUT_PATH}/RepairDebug"
         _evaluate_path = f"{OUTPUT_PATH}/EvaluateDebug"
+    elif _add_issue:
+        _repair_path = f"{OUTPUT_PATH}/RepairIssueMethod"
+        _evaluate_path = f"{OUTPUT_PATH}/EvaluateIssueMethod"
     else:
         _repair_path = f"{OUTPUT_PATH}/Repair"
         _evaluate_path = f"{OUTPUT_PATH}/Evaluate"
@@ -129,7 +134,7 @@ if __name__ == '__main__':
     fixed_count = 0
     all_count_lock = threading.Lock()
     fixed_count_lock = threading.Lock()
-
+    eventlet.monkey_patch()
 
     def evaluate(pid, bid):
         global all_count, fixed_count
@@ -188,7 +193,6 @@ if __name__ == '__main__':
                     extract_replace(_raw_response=_repair)
                     continue
                 print("apply_replace_list finished")
-                eventlet.monkey_patch()
                 try:
                     with eventlet.Timeout(300):
                         _run_test_result = project.run_test()
@@ -207,18 +211,18 @@ if __name__ == '__main__':
             print(f"fail {_version_str}")
             open(_my_evaluate_path, "w").close()
 
-    _all_pd = list(defects4j_utils.d4j_pids_bids())
-    for pid, bid in tqdm(_all_pd, desc="Evaluate"):
-        evaluate(pid, bid)
-    # with concurrent.futures.ThreadPoolExecutor(
-    #         max_workers=4
-    # ) as executor:
-    #     futures = [
-    #         executor.submit(
-    #             evaluate,
-    #             pid,
-    #             bid
-    #         )
-    #         for pid, bid in defects4j_utils.d4j_pids_bids()
-    #     ]
-    #     concurrent.futures.wait(futures)
+    # _all_pd = list(defects4j_utils.d4j_pids_bids())
+    # for pid, bid in tqdm(_all_pd, desc="Evaluate"):
+    #     evaluate(pid, bid)
+    with concurrent.futures.ThreadPoolExecutor(
+            max_workers=128
+    ) as executor:
+        futures = [
+            executor.submit(
+                evaluate,
+                pid,
+                bid
+            )
+            for pid, bid in defects4j_utils.d4j_pids_bids()
+        ]
+        concurrent.futures.wait(futures)
