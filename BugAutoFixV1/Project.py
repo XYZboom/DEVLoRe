@@ -77,6 +77,8 @@ class Project:
 
     def apply_replace(self, _replace: Dict[str, str]):
         _file = self.find_file(_replace[self.CLASS_KEY].replace(".", "/") + ".java")
+        if "test" in _file or "Test" in _file:
+            return
         with open(_file, "r") as _f:
             _ori_lines = _f.read().splitlines()
         _line_number_ori = len(_ori_lines)
