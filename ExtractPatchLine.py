@@ -12,7 +12,9 @@ if __name__ == '__main__':
 
     _edit_line_path = f"{OUTPUT_PATH}/FixEditLine"
     _patch_method_path = f"{OUTPUT_PATH}/PatchMethodLocations"
-    locator_jar = "/home/xyzboom/Code/MethodLocator-1.0-SNAPSHOT-all.jar"
+    if not os.path.exists(_patch_method_path):
+        os.makedirs(_patch_method_path)
+    locator_jar = "/home/xyzboom/jars/MethodLocator-1.0-SNAPSHOT-all.jar"
 
 
     def locate(_input, _output, _location):

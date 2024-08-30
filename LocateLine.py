@@ -53,21 +53,24 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--add-debug-info", help="add debug info", default=False)
+    parser.add_argument("--add-issue-info", help="add issue info", default=False)
     args = parser.parse_args()
 
     _add_debug = args.add_debug_info
-    if _add_debug:
-        _finished_path = f"{D4J_JSON_PATH}/second_step_llm_debug.txt"
-    else:
-        _finished_path = f"{D4J_JSON_PATH}/second_step_llm.txt"
+    _add_issue = args.add_issue_info
 
-    if not os.path.exists(_finished_path):
-        open(_finished_path, "w").close()
-    with open(_finished_path, "r") as f:
-        finished = f.read().splitlines()
     if _add_debug:
-        _locate_line_path = f"{OUTPUT_PATH}/LocateLineDebug"
+        if not _add_issue:
+            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
+            _locate_line_path = f"{OUTPUT_PATH}/LocateLineDebug"
+        else:
+            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue"
+            _locate_line_path = f"{OUTPUT_PATH}/LocateLineIssueDebug"
+    elif _add_issue:
+        _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue"
+        _locate_line_path = f"{OUTPUT_PATH}/LocateLineIssue"
     else:
+        _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
         _locate_line_path = f"{OUTPUT_PATH}/LocateLine"
 
     if not os.path.exists(_locate_line_path):
@@ -75,17 +78,20 @@ if __name__ == '__main__':
 
 
     def do_extract(pid, bid):
-        if f"{pid}_{bid}b" in finished or os.path.exists(f"{_locate_line_path}/{pid}_{bid}b.json"):
+        if os.path.exists(f"{_locate_line_path}/{pid}_{bid}b.json"):
             print(f"{pid}_{bid}b exists.")
             return
-        _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method/{pid}_{bid}b.json"
+        _buggy_method_file = f"{_buggy_method_path}/{pid}_{bid}b.json"
         _failed_test_path = f"{D4J_JSON_PATH}/result_failed_tests_method_content/{pid}_{bid}b.json"
-        if not os.path.exists(_buggy_method_path) or not os.path.exists(_failed_test_path):
+        if not os.path.exists(_buggy_method_file) or not os.path.exists(_failed_test_path):
             print(f"buggy method or failed test of {pid}_{bid}b not exists.")
             return
         _debug_path = f"{OUTPUT_PATH}/DebugInfo/{pid}_{bid}b.txt"
         if not os.path.exists(_debug_path) and _add_debug:
             print(f"debug info not exists when --add-debug-info is True. {pid}_{bid}b")
+            return
+        if _add_debug and (os.path.getsize(_debug_path) == 0 or os.path.getsize(_debug_path) > 20 * 1024):
+            print(f"{pid}_{bid}b debug info is empty or size too large.")
             return
         _debug_info = ""
         if _add_debug:
@@ -94,7 +100,7 @@ if __name__ == '__main__':
                 _debug_info += _f.read()
         print(f"start {pid}_{bid}b")
         chat = Chat.Chat("gpt-4o-mini", SYS_PROMPT)
-        with open(_buggy_method_path, mode="r") as _f:
+        with open(_buggy_method_file, mode="r") as _f:
             _buggy_method = json.load(_f)
         _skeleton_of_classes = "\n".join([
             f"### {_class} ###\n{_buggy_method[_class]}"
@@ -122,8 +128,6 @@ if __name__ == '__main__':
         print(f"finish chat in {pid}_{bid}b")
         with open(f"{_locate_line_path}/{pid}_{bid}b.json", "w") as _f:
             json.dump(_result, _f)
-        with open(_finished_path, "a") as _f:
-            _f.write(f"{pid}_{bid}b\n")
         print(f"finish {pid}_{bid}b")
 
 

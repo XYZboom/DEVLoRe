@@ -117,11 +117,15 @@ if __name__ == '__main__':
     _add_issue = args.add_issue_info
 
     if _add_debug:
-        _repair_path = f"{OUTPUT_PATH}/RepairDebug"
-        _evaluate_path = f"{OUTPUT_PATH}/EvaluateDebug"
+        if not _add_issue:
+            _repair_path = f"{OUTPUT_PATH}/RepairDebug"
+            _evaluate_path = f"{OUTPUT_PATH}/EvaluateDebug"
+        else:
+            _repair_path = f"{OUTPUT_PATH}/RepairIssueDebug"
+            _evaluate_path = f"{OUTPUT_PATH}/EvaluateIssueDebug"
     elif _add_issue:
-        _repair_path = f"{OUTPUT_PATH}/RepairIssueMethod"
-        _evaluate_path = f"{OUTPUT_PATH}/EvaluateIssueMethod"
+        _repair_path = f"{OUTPUT_PATH}/RepairIssue"
+        _evaluate_path = f"{OUTPUT_PATH}/EvaluateIssue"
     else:
         _repair_path = f"{OUTPUT_PATH}/Repair"
         _evaluate_path = f"{OUTPUT_PATH}/Evaluate"
@@ -166,6 +170,9 @@ if __name__ == '__main__':
             if "responses" in _repair:
                 for _response in _repair["responses"]:
                     _repairs.append(_response)
+        if not _repairs:
+            print("no available repairs")
+            return
         _success_repair = None
         with tempfile.TemporaryDirectory() as temp_dir:
             print(f"checkout {_version_str}")
@@ -194,7 +201,7 @@ if __name__ == '__main__':
                     continue
                 print("apply_replace_list finished")
                 try:
-                    with eventlet.Timeout(300):
+                    with eventlet.Timeout(600):
                         _run_test_result = project.run_test()
                         if _run_test_result == 'success':
                             _success_repair = _replace_result
@@ -215,7 +222,7 @@ if __name__ == '__main__':
     # for pid, bid in tqdm(_all_pd, desc="Evaluate"):
     #     evaluate(pid, bid)
     with concurrent.futures.ThreadPoolExecutor(
-            max_workers=128
+            max_workers=32
     ) as executor:
         futures = [
             executor.submit(
@@ -223,6 +230,6 @@ if __name__ == '__main__':
                 pid,
                 bid
             )
-            for pid, bid in defects4j_utils.d4j_pids_bids()
+            for pid, bid in list(defects4j_utils.d4j_pids_bids())
         ]
         concurrent.futures.wait(futures)

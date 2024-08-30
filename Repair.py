@@ -71,23 +71,23 @@ if __name__ == '__main__':
 
     _add_debug = args.add_debug_info
     _add_issue = args.add_issue_info
-    if _add_debug:
-        _finished_path = f"{D4J_JSON_PATH}/repair_debug_info.txt"
-    else:
-        _finished_path = f"{D4J_JSON_PATH}/repair.txt"
-
-    if not os.path.exists(_finished_path):
-        open(_finished_path, "w").close()
-    with open(_finished_path, "r") as f:
-        finished = f.read().splitlines()
 
     if _add_debug:
-        _locate_line_prefix = f"{OUTPUT_PATH}/LocateLineDebug"
-        _repair_path = f"{OUTPUT_PATH}/RepairDebug"
+        if not _add_issue:
+            # debug info is not used in locate method level
+            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
+            _locate_line_prefix = f"{OUTPUT_PATH}/LocateLineDebug"
+            _repair_path = f"{OUTPUT_PATH}/RepairDebug"
+        else:
+            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue"
+            _locate_line_prefix = f"{OUTPUT_PATH}/LocateLineIssueDebug"
+            _repair_path = f"{OUTPUT_PATH}/RepairIssueDebug"
     elif _add_issue:
-        _locate_line_prefix = f"{OUTPUT_PATH}/LocateLineIssueMethod"
-        _repair_path = f"{OUTPUT_PATH}/RepairIssueMethod"
+        _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue"
+        _locate_line_prefix = f"{OUTPUT_PATH}/LocateLineIssue"
+        _repair_path = f"{OUTPUT_PATH}/RepairIssue"
     else:
+        _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
         _locate_line_prefix = f"{OUTPUT_PATH}/LocateLine"
         _repair_path = f"{OUTPUT_PATH}/Repair"
 
@@ -99,19 +99,16 @@ if __name__ == '__main__':
         if os.path.exists(f"{_repair_path}/{pid}_{bid}b.json"):
             print(f"{pid}_{bid}b exists.")
             return
-        if _add_issue:
-            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue_locate_method/{pid}_{bid}b.json"
-        else:
-            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method/{pid}_{bid}b.json"
+        _buggy_method_file = f"{_buggy_method_path}/{pid}_{bid}b.json"
         _failed_test_path = f"{D4J_JSON_PATH}/result_failed_tests_method_content/{pid}_{bid}b.json"
         _locate_line_path = f"{_locate_line_prefix}/{pid}_{bid}b.json"
-        if not os.path.exists(_buggy_method_path) or not os.path.exists(_failed_test_path)\
+        if not os.path.exists(_buggy_method_file) or not os.path.exists(_failed_test_path)\
                 or not os.path.exists(_locate_line_path):
             return
         print(f"start {pid}_{bid}b")
         with open(_locate_line_path, "r") as _f:
             _locate_line_json = json.load(_f)
-        with open(_buggy_method_path, mode="r") as _f:
+        with open(_buggy_method_file, mode="r") as _f:
             _buggy_method = json.load(_f)
         _skeleton_of_classes = "\n".join([
             f"### {_class} ###\n{_buggy_method[_class]}"
@@ -146,8 +143,6 @@ if __name__ == '__main__':
         print(f"finish chat in {pid}_{bid}b")
         with open(f"{_repair_path}/{pid}_{bid}b.json", "w") as _f:
             json.dump(_results, _f)
-        with open(_finished_path, "a") as _f:
-            _f.write(f"{pid}_{bid}b\n")
         print(f"finish {pid}_{bid}b")
 
 

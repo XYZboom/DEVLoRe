@@ -31,19 +31,24 @@ def handle_raw_response(_raw_response):
 
 if __name__ == '__main__':
     import tempfile
+    import argparse
 
     _ = load_dotenv(find_dotenv())
     EXTRACT_JAR_PATH = os.environ.get("EXTRACT_JAR_PATH")
     D4J_JSON_PATH = os.environ.get("D4J_JSON_PATH")
     OUTPUT_PATH = os.environ.get("OUTPUT_PATH")
 
-    _finished_record = f"{D4J_JSON_PATH}/second_step.txt"
-    if not os.path.exists(_finished_record):
-        open(_finished_record, "w").close()
-    with open(_finished_record, "r") as f:
-        finished = f.read().splitlines()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--add-issue-info", help="add issue info", default=False)
+    args = parser.parse_args()
+    _add_issue = args.add_issue_info
 
-    _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
+    if _add_issue:
+        _locate_output_path = f"{OUTPUT_PATH}/LocateMethodIssue"
+        _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue"
+    else:
+        _locate_output_path = f"{OUTPUT_PATH}/LocateMethod"
+        _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
     if not os.path.exists(_buggy_method_path):
         os.makedirs(_buggy_method_path)
 
@@ -61,11 +66,11 @@ if __name__ == '__main__':
                 return
             else:
                 os.remove(_buggy_output)
-        _locate_output_path = f"{OUTPUT_PATH}/LocateMethod/{pid}_{bid}b.json"
-        if not os.path.exists(_locate_output_path):
+        _locate_output_file = f"{_locate_output_path}/{pid}_{bid}b.json"
+        if not os.path.exists(_locate_output_file):
             # print(f"{pid}_{bid}b method location not found.")
             return
-        with open(_locate_output_path, "r") as _f:
+        with open(_locate_output_file, "r") as _f:
             _locate_json = json.load(_f)
         _raw_response = _locate_json['response']
         _handled = handle_raw_response(_raw_response)

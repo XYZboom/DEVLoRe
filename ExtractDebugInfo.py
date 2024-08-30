@@ -12,6 +12,7 @@ if __name__ == '__main__':
     import json
     import tqdm
     import eventlet
+    import argparse
     from BugAutoFixV1.Project import Project
     from ExtractMethodAndField import handle_raw_response
     import concurrent.futures
@@ -19,9 +20,26 @@ if __name__ == '__main__':
     _ = load_dotenv(find_dotenv())
     OUTPUT_PATH = os.environ.get("OUTPUT_PATH")
 
-    _debug_info_path = f"{OUTPUT_PATH}/DebugInfo"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--add-debug-info", help="add debug info", default=False)
+    parser.add_argument("--add-issue-info", help="add issue info", default=False)
+    args = parser.parse_args()
+
+    _add_debug = args.add_debug_info
+    _add_issue = args.add_issue_info
+
+    if _add_issue:
+        _debug_info_path = f"{OUTPUT_PATH}/DebugInfoIssue"
+        _locate_path = f"{OUTPUT_PATH}/LocateMethodIssue"
+    else:
+        _debug_info_path = f"{OUTPUT_PATH}/DebugInfo"
+        _locate_path = f"{OUTPUT_PATH}/LocateMethod"
+
     if not os.path.exists(_debug_info_path):
         os.makedirs(_debug_info_path)
+
+    eventlet.monkey_patch()
+
 
     def extract_debug_info(pid, bid):
         _version_str = f"{pid}_{bid}b"
@@ -40,11 +58,11 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f"create project failed: {_version_str}")
                 return
-            _locate_output_path = f"{OUTPUT_PATH}/LocateMethod/{pid}_{bid}b.json"
-            if not os.path.exists(_locate_output_path):
+            _locate_file = f"{_locate_path}/{pid}_{bid}b.json"
+            if not os.path.exists(_locate_file):
                 print(f"{pid}_{bid}b method location not found.")
                 return
-            with open(_locate_output_path, "r") as _f:
+            with open(_locate_file, "r") as _f:
                 _locate_json = json.load(_f)
             _raw_response = _locate_json['response']
             _methods_located = handle_raw_response(_raw_response)
@@ -54,9 +72,8 @@ if __name__ == '__main__':
             print(f"run test {_version_str}")
             trigger_test_methods = project.trigger_test_methods().split(",")
             for method in trigger_test_methods:
-                eventlet.monkey_patch()
                 try:
-                    with eventlet.Timeout(300):
+                    with eventlet.Timeout(600):
                         project.run_test(False, method)
                 except eventlet.Timeout:
                     print("execution time out")
@@ -67,21 +84,22 @@ if __name__ == '__main__':
                 f.write(_debug_info)
         print(f"{_version_str} done")
 
+
     all_ids = list(defects4j_utils.d4j_pids_bids())
-    for pid, bid in tqdm.tqdm(all_ids, desc=f"Extract debug info", unit="step"):
-        try:
-            extract_debug_info(pid, bid)
-        except Exception as e:
-            traceback.print_exc()
-    # with concurrent.futures.ThreadPoolExecutor(
-    #         max_workers=4
-    # ) as executor:
-    #     futures = [
-    #         executor.submit(
-    #             extract_debug_info,
-    #             pid,
-    #             bid
-    #         )
-    #         for pid, bid in defects4j_utils.d4j_pids_bids()
-    #     ]
-    #     concurrent.futures.wait(futures)
+    # for pid, bid in tqdm.tqdm(all_ids, desc=f"Extract debug info", unit="step"):
+    #     try:
+    #         extract_debug_info(pid, bid)
+    #     except Exception as e:
+    #         traceback.print_exc()
+    with concurrent.futures.ThreadPoolExecutor(
+            max_workers=16
+    ) as executor:
+        futures = [
+            executor.submit(
+                extract_debug_info,
+                pid,
+                bid
+            )
+            for pid, bid in defects4j_utils.d4j_pids_bids()
+        ]
+        concurrent.futures.wait(futures)
