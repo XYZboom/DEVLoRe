@@ -76,7 +76,10 @@ class Project:
             self.apply_replace(_replace)
 
     def apply_replace(self, _replace: Dict[str, str]):
-        _file = self.find_file(_replace[self.CLASS_KEY].replace(".", "/") + ".java")
+        _class_name = _replace[self.CLASS_KEY]
+        if "test" in _class_name or "Test" in _class_name:
+            return
+        _file = self.find_file(_class_name.replace(".", "/") + ".java")
         if "test" in _file or "Test" in _file:
             return
         with open(_file, "r") as _f:

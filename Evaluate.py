@@ -112,11 +112,20 @@ if __name__ == '__main__':
     parser.add_argument("--patch-dir", help="output git patch directory", default=False)
     parser.add_argument("--add-debug-info", help="add debug info", default=False)
     parser.add_argument("--add-issue-info", help="add issue info", default=False)
+    parser.add_argument("--use-baseline-method", help="use baseline method", default=False)
     args = parser.parse_args()
     _add_debug = args.add_debug_info
     _add_issue = args.add_issue_info
+    _baseline_method = args.use_baseline_method
 
-    if _add_debug:
+    if _baseline_method:
+        if _add_debug:
+            _repair_path = f"{OUTPUT_PATH}/RepairBaselineDebug"
+            _evaluate_path = f"{OUTPUT_PATH}/EvaluateBaselineDebug"
+        else:
+            _repair_path = f"{OUTPUT_PATH}/RepairBaseline"
+            _evaluate_path = f"{OUTPUT_PATH}/EvaluateBaseline"
+    elif _add_debug:
         if not _add_issue:
             _repair_path = f"{OUTPUT_PATH}/RepairDebug"
             _evaluate_path = f"{OUTPUT_PATH}/EvaluateDebug"
@@ -200,14 +209,14 @@ if __name__ == '__main__':
                     extract_replace(_raw_response=_repair)
                     continue
                 print("apply_replace_list finished")
-                try:
-                    with eventlet.Timeout(600):
-                        _run_test_result = project.run_test()
-                        if _run_test_result == 'success':
-                            _success_repair = _replace_result
-                            break
-                except eventlet.Timeout:
-                    print("execution time out")
+                # try:
+                    # with eventlet.Timeout(600):
+                _run_test_result = project.run_test()
+                if _run_test_result == 'success':
+                    _success_repair = _replace_result
+                    break
+                # except eventlet.Timeout:
+                #     print("execution time out")
         if _success_repair:
             print(f"success {_version_str}")
             with open(_my_evaluate_path, "w") as _f:
@@ -222,7 +231,7 @@ if __name__ == '__main__':
     # for pid, bid in tqdm(_all_pd, desc="Evaluate"):
     #     evaluate(pid, bid)
     with concurrent.futures.ThreadPoolExecutor(
-            max_workers=32
+            max_workers=64
     ) as executor:
         futures = [
             executor.submit(

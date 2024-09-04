@@ -27,6 +27,7 @@ if __name__ == '__main__':
     _debug_more = set()
     _issue_debug_more = set()
     _normal_more = set()
+    _all = set()
 
     for pid, bid in defects4j_utils.d4j_pids_bids():
         _version_str = f"{pid}_{bid}b"
@@ -56,13 +57,13 @@ if __name__ == '__main__':
             _normal_more_count += 1
             _normal_more.add(_version_str)
 
-    print("issue:")
+    print("issue more:")
     print(_issue_more_count)
     print(_issue_more)
-    print("debug:")
+    print("debug more:")
     print(_debug_more_count)
     print(_debug_more)
-    print("issue and debug:")
+    print("issue and debug more:")
     print(_issue_debug_more_count)
     print(_issue_debug_more)
     print("issue-debug more than issue:")
@@ -73,5 +74,6 @@ if __name__ == '__main__':
     _issue_debug_more_debug = _issue_debug_more.difference(_debug_more)
     print(len(_issue_debug_more_debug))
     print(_issue_debug_more_debug)
+    print("normal more than all:")
     print(_normal_more_count)
     print(_normal_more)

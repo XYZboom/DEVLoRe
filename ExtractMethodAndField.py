@@ -40,10 +40,15 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--add-issue-info", help="add issue info", default=False)
+    parser.add_argument("--use-baseline-method", help="use baseline method", default=False)
     args = parser.parse_args()
     _add_issue = args.add_issue_info
+    _baseline_method = args.use_baseline_method
 
-    if _add_issue:
+    if _baseline_method:
+        _locate_output_path = f"{OUTPUT_PATH}/PatchMethodLocations"
+        _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_baseline"
+    elif _add_issue:
         _locate_output_path = f"{OUTPUT_PATH}/LocateMethodIssue"
         _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue"
     else:
@@ -66,17 +71,21 @@ if __name__ == '__main__':
                 return
             else:
                 os.remove(_buggy_output)
-        _locate_output_file = f"{_locate_output_path}/{pid}_{bid}b.json"
+        _locate_output_file = f"{_locate_output_path}/{pid}_{bid}b.{'txt' if _baseline_method else 'json'}"
         if not os.path.exists(_locate_output_file):
             # print(f"{pid}_{bid}b method location not found.")
             return
-        with open(_locate_output_file, "r") as _f:
-            _locate_json = json.load(_f)
-        _raw_response = _locate_json['response']
-        _handled = handle_raw_response(_raw_response)
-        if not _handled:
-            print(_version_str, _raw_response)
-            return
+        if not _baseline_method:
+            with open(_locate_output_file, "r") as _f:
+                _locate_json = json.load(_f)
+            _raw_response = _locate_json['response']
+            _handled = handle_raw_response(_raw_response)
+            if not _handled:
+                print(_version_str, _raw_response)
+                return
+        else:
+            with open(_locate_output_file, "r") as _f:
+                _handled = ",".join((_f.read().strip().splitlines()))
         print(f"checkout: {pid}_{bid}b")
         with tempfile.TemporaryDirectory() as temp_dir:
             defects4j_utils.checkout(pid, bid, temp_dir)

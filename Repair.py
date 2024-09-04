@@ -67,12 +67,22 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--add-debug-info", help="add debug info", default=False)
     parser.add_argument("--add-issue-info", help="add issue info", default=False)
+    parser.add_argument("--use-baseline-method", help="use baseline method", default=False)
     args = parser.parse_args()
 
     _add_debug = args.add_debug_info
     _add_issue = args.add_issue_info
+    _baseline_method = args.use_baseline_method
 
-    if _add_debug:
+    if _baseline_method:
+        _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_baseline"
+        if _add_debug:
+            _locate_line_prefix = f"{OUTPUT_PATH}/LocateLineBaselineDebug"
+            _repair_path = f"{OUTPUT_PATH}/RepairBaselineDebug"
+        else:
+            _locate_line_prefix = f"{OUTPUT_PATH}/LocateLineBaseline"
+            _repair_path = f"{OUTPUT_PATH}/RepairBaseline"
+    elif _add_debug:
         if not _add_issue:
             # debug info is not used in locate method level
             _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
