@@ -23,6 +23,7 @@ The locations must be specified as line number in class.
 {failed_tests}
 ### Possible bug locations (for your reference only) ###
 {possible_bug_locations}
+{debug_info}
 
 Please first localize the bug based on the issue statement, and then generate *SEARCH/REPLACE* edits to fix the issue.
 
@@ -128,13 +129,31 @@ if __name__ == '__main__':
         if not _failed_tests:
             print(f"no failed test in {pid}_{bid}b")
             return
+        if _add_issue:
+            _debug_file = f"{OUTPUT_PATH}/DebugInfoIssue/{pid}_{bid}b.txt"
+        elif _baseline_method:
+            _debug_file = f"{OUTPUT_PATH}/DebugInfoBaseline/{pid}_{bid}b.txt"
+        else:
+            _debug_file = f"{OUTPUT_PATH}/DebugInfo/{pid}_{bid}b.txt"
+        if not os.path.exists(_debug_file) and _add_debug:
+            print(f"debug info not exists when --add-debug-info is True. {pid}_{bid}b")
+            return
+        if _add_debug and (os.path.getsize(_debug_file) == 0 or os.path.getsize(_debug_file) > 20 * 1024):
+            print(f"{pid}_{bid}b debug info is empty or size too large.")
+            return
+        _debug_info = ""
+        if _add_debug:
+            with open(_debug_file, "r") as _f:
+                _debug_info = "### Debug info ###\n"
+                _debug_info += _f.read()
         _results = []
         _locate_lines = set(_locate_line_json['responses'])
         for _locate_line in _locate_lines:
             user_prompt = LocateLinePrompt.format(
                 skeleton_of_classes=_skeleton_of_classes,
                 failed_tests=_failed_tests,
-                possible_bug_locations=_locate_line
+                possible_bug_locations=_locate_line,
+                debug_info=_debug_info
             )
             chat = Chat.Chat("gpt-4o-mini", SYS_PROMPT)
             try:

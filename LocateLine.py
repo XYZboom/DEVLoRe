@@ -94,16 +94,21 @@ if __name__ == '__main__':
         if not os.path.exists(_buggy_method_file) or not os.path.exists(_failed_test_path):
             print(f"buggy method or failed test of {pid}_{bid}b not exists.")
             return
-        _debug_path = f"{OUTPUT_PATH}/DebugInfo/{pid}_{bid}b.txt"
-        if not os.path.exists(_debug_path) and _add_debug:
+        if _add_issue:
+            _debug_file = f"{OUTPUT_PATH}/DebugInfoIssue/{pid}_{bid}b.txt"
+        elif _baseline_method:
+            _debug_file = f"{OUTPUT_PATH}/DebugInfoBaseline/{pid}_{bid}b.txt"
+        else:
+            _debug_file = f"{OUTPUT_PATH}/DebugInfo/{pid}_{bid}b.txt"
+        if not os.path.exists(_debug_file) and _add_debug:
             print(f"debug info not exists when --add-debug-info is True. {pid}_{bid}b")
             return
-        if _add_debug and (os.path.getsize(_debug_path) == 0 or os.path.getsize(_debug_path) > 20 * 1024):
+        if _add_debug and (os.path.getsize(_debug_file) == 0 or os.path.getsize(_debug_file) > 20 * 1024):
             print(f"{pid}_{bid}b debug info is empty or size too large.")
             return
         _debug_info = ""
         if _add_debug:
-            with open(_debug_path, "r") as _f:
+            with open(_debug_file, "r") as _f:
                 _debug_info = "### Debug info ###\n"
                 _debug_info += _f.read()
         print(f"start {pid}_{bid}b")

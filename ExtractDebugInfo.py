@@ -23,14 +23,19 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--add-debug-info", help="add debug info", default=False)
     parser.add_argument("--add-issue-info", help="add issue info", default=False)
+    parser.add_argument("--use-baseline-method", help="use baseline method", default=False)
     args = parser.parse_args()
 
     _add_debug = args.add_debug_info
     _add_issue = args.add_issue_info
+    _baseline_method = args.use_baseline_method
 
     if _add_issue:
         _debug_info_path = f"{OUTPUT_PATH}/DebugInfoIssue"
         _locate_path = f"{OUTPUT_PATH}/LocateMethodIssue"
+    elif _baseline_method:
+        _debug_info_path = f"{OUTPUT_PATH}/DebugInfoBaseline"
+        _locate_path = f"{OUTPUT_PATH}/PatchMethodLocations"
     else:
         _debug_info_path = f"{OUTPUT_PATH}/DebugInfo"
         _locate_path = f"{OUTPUT_PATH}/LocateMethod"
@@ -58,14 +63,18 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f"create project failed: {_version_str}")
                 return
-            _locate_file = f"{_locate_path}/{pid}_{bid}b.json"
+            _locate_file = f"{_locate_path}/{pid}_{bid}b.{'txt' if _baseline_method else 'json'}"
             if not os.path.exists(_locate_file):
                 print(f"{pid}_{bid}b method location not found.")
                 return
-            with open(_locate_file, "r") as _f:
-                _locate_json = json.load(_f)
-            _raw_response = _locate_json['response']
-            _methods_located = handle_raw_response(_raw_response)
+            if not _baseline_method:
+                with open(_locate_file, "r") as _f:
+                    _locate_json = json.load(_f)
+                _raw_response = _locate_json['response']
+                _methods_located = handle_raw_response(_raw_response)
+            else:
+                with open(_locate_file, "r") as _f:
+                    _methods_located = ",".join((_f.read().strip().splitlines()))
             with open(os.path.join(temp_dir, "temp.properties"), "w") as _f:
                 _f.write(f"{KEY_ARGS_USE_SPECIFIED}=true\n")
                 _f.write(f"{KEY_ARGS_METHODS}={_methods_located}")
@@ -85,7 +94,7 @@ if __name__ == '__main__':
         print(f"{_version_str} done")
 
 
-    all_ids = list(defects4j_utils.d4j_pids_bids())
+    # all_ids = list(defects4j_utils.d4j_pids_bids())
     # for pid, bid in tqdm.tqdm(all_ids, desc=f"Extract debug info", unit="step"):
     #     try:
     #         extract_debug_info(pid, bid)

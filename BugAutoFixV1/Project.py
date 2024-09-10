@@ -83,12 +83,13 @@ class Project:
         if "test" in _file or "Test" in _file:
             return
         with open(_file, "r") as _f:
-            _ori_lines = _f.read().splitlines()
+            _ori_content = _f.read()
+            _ori_lines = _ori_content.splitlines()
         _line_number_ori = len(_ori_lines)
         _replace_line_index = -1
         _replace_lines = _replace[self.SEARCH_KEY].splitlines()
         for line_index, _ in enumerate(_ori_lines[:-len(_replace_lines)]):
-            #                                             ^^^^^^^^^^^^^^^^^^^^
+            #                                     ^^^^^^^^^^^^^^^^^^^^
             # if remain lines count > replace lines count, no more lines could be replaced.
             found = True
 
@@ -106,7 +107,10 @@ class Project:
         _ori_lines[_replace_line_index + 1:_replace_line_index + len(_replace_lines)] = []
         _ori_lines[_replace_line_index] = _replace[self.REPLACE_KEY] + "\n"
         with open(_file, "w") as _f:
-            _f.write("\n".join(_ori_lines))
+            if "\r" in _ori_content:
+                _f.write("\r\n".join(_ori_lines))
+            else:
+                _f.write("\n".join(_ori_lines))
 
     def trigger_test_methods(self):
         return self._trigger_test_methods
@@ -194,7 +198,7 @@ class Project:
     def all_files(self) -> List[str]:
         return self._files
 
-    def run_test(self, delete_last_log=True, single_test: str = None):
+    def run_test(self, delete_last_log=True, single_test: str = None, relevant=True):
         # noinspection PyBroadException
         try:
             os.remove(os.path.join(self.base_dir, D4J_FAILING_TEST))
@@ -209,8 +213,11 @@ class Project:
         if single_test:
             result = subprocess.run(f"{D4J_EXEC} test -t {single_test}", shell=True,
                                     stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.base_dir)
-        else:
+        elif relevant:
             result = subprocess.run(f"{D4J_EXEC} test -r", shell=True,
+                                    stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.base_dir)
+        else:
+            result = subprocess.run(f"{D4J_EXEC} test", shell=True,
                                     stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.base_dir)
         stdout = result.stdout.decode("utf-8")
         stderr = result.stderr.decode("utf-8")

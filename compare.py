@@ -7,6 +7,14 @@ def filter_test_edit(_f: str):
         os.remove(_f)
 
 
+def available(_path: str) -> bool:
+    return os.path.exists(_path) and os.path.getsize(_path) > 0
+
+
+def exists(_path: str) -> bool:
+    return os.path.exists(_path)
+
+
 if __name__ == '__main__':
     from dotenv import load_dotenv, find_dotenv
     import os
@@ -19,6 +27,7 @@ if __name__ == '__main__':
     _issue_eval_path = f"{OUTPUT_PATH}/EvaluateIssue"
     _issue_debug_eval_path = f"{OUTPUT_PATH}/EvaluateIssueDebug"
     _eval_path = f"{OUTPUT_PATH}/Evaluate"
+    _baseline_debug_eval_path = f"{OUTPUT_PATH}/EvaluateBaselineDebug"
     _issue_more_count = 0
     _debug_more_count = 0
     _issue_debug_more_count = 0
@@ -27,7 +36,8 @@ if __name__ == '__main__':
     _debug_more = set()
     _issue_debug_more = set()
     _normal_more = set()
-    _all = set()
+    _final = set()
+    _exist_final = set()
 
     for pid, bid in defects4j_utils.d4j_pids_bids():
         _version_str = f"{pid}_{bid}b"
@@ -35,25 +45,27 @@ if __name__ == '__main__':
         _issue_eval_file = f"{_issue_eval_path}/{_version_str}.json"
         _issue_debug_eval_file = f"{_issue_debug_eval_path}/{_version_str}.json"
         _eval_file = f"{_eval_path}/{_version_str}.json"
+        _baseline_debug_eval_file = f"{_baseline_debug_eval_path}/{_version_str}.json"
+        if available(_baseline_debug_eval_file):
+            _final.add((pid, bid))
+        if exists(_baseline_debug_eval_file):
+            _exist_final.add((pid, bid))
         # for _f in [_debug_eval_file, _issue_eval_file,_issue_debug_eval_file, _eval_file]:
         #     filter_test_edit(_f)
         # continue
-        if ((os.path.exists(_issue_eval_file) and os.path.getsize(_issue_eval_file) > 0)
-                and (not os.path.exists(_eval_file) or os.path.getsize(_eval_file) == 0)):
+        if available(_issue_eval_file) and not available(_eval_file):
             _issue_more_count += 1
             _issue_more.add(_version_str)
-        if ((os.path.exists(_debug_eval_file) and os.path.getsize(_debug_eval_file) > 0)
-                and (not os.path.exists(_eval_file) or os.path.getsize(_eval_file) == 0)):
+        if available(_debug_eval_file) and not available(_eval_file):
             _debug_more_count += 1
             _debug_more.add(_version_str)
-        if ((os.path.exists(_issue_debug_eval_file) and os.path.getsize(_issue_debug_eval_file) > 0)
-                and (not os.path.exists(_eval_file) or os.path.getsize(_eval_file) == 0)):
+        if available(_issue_debug_eval_file) and not available(_eval_file):
             _issue_debug_more_count += 1
             _issue_debug_more.add(_version_str)
-        if ((os.path.exists(_eval_file) and os.path.getsize(_eval_file) > 0)
-                and (not os.path.exists(_debug_eval_file) or os.path.getsize(_debug_eval_file) == 0)
-                and (not os.path.exists(_issue_debug_eval_file) or os.path.getsize(_issue_debug_eval_file) == 0)
-                and (not os.path.exists(_issue_eval_file) or os.path.getsize(_issue_eval_file) == 0)):
+        if (available(_eval_file)
+                and not available(_debug_eval_file)
+                and not available(_issue_debug_eval_file)
+                and not available(_issue_eval_file)):
             _normal_more_count += 1
             _normal_more.add(_version_str)
 
@@ -77,3 +89,31 @@ if __name__ == '__main__':
     print("normal more than all:")
     print(_normal_more_count)
     print(_normal_more)
+
+    _single_function_count = 0
+    _exist_single_function_count = 0
+    _fixed_single_function_count = 0
+    _fixed_non_single_count = 0
+    _more_giant = set()
+    _giant_more = set()
+    for pid, bid in defects4j_utils.d4j_pids_bids():
+        if defects4j_utils.is_single_function_bug(pid, bid):
+            _single_function_count += 1
+            if (pid, bid) in _exist_final:
+                _exist_single_function_count += 1
+            if (pid, bid) in _final:
+                _fixed_single_function_count += 1
+                if not defects4j_utils.can_giant_repair_fix(pid, bid):
+                    _more_giant.add((pid, bid))
+            if defects4j_utils.can_giant_repair_fix(pid, bid) and (pid, bid) not in _giant_more:
+                _giant_more.add((pid, bid))
+        elif (pid, bid) in _final:
+            _fixed_non_single_count += 1
+    print(f"single-function all: {_fixed_single_function_count}/{_single_function_count} = "
+          f"{_fixed_single_function_count / _single_function_count}")
+    print(f"single-function exist: {_fixed_single_function_count}/{_exist_single_function_count} = "
+          f"{_fixed_single_function_count / _exist_single_function_count}")
+    print(f"non-single: {_fixed_non_single_count}")
+    print(f"single-function more giant: {len(_more_giant)}")
+    print(f"giant more: {len(_giant_more)}")
+

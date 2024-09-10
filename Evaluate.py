@@ -113,10 +113,12 @@ if __name__ == '__main__':
     parser.add_argument("--add-debug-info", help="add debug info", default=False)
     parser.add_argument("--add-issue-info", help="add issue info", default=False)
     parser.add_argument("--use-baseline-method", help="use baseline method", default=False)
+    parser.add_argument("--final-eval", help="run all test to evaluate final result", default=False)
     args = parser.parse_args()
     _add_debug = args.add_debug_info
     _add_issue = args.add_issue_info
     _baseline_method = args.use_baseline_method
+    _final_eval = args.final_eval
 
     if _baseline_method:
         if _add_debug:
@@ -140,6 +142,8 @@ if __name__ == '__main__':
         _evaluate_path = f"{OUTPUT_PATH}/Evaluate"
     _patch_path = args.patch_dir
     _patch_valid = False if args.patch_valid == 'False' else True
+    if _patch_valid and not os.path.exists(_patch_path):
+        os.makedirs(_patch_path)
     if not os.path.exists(_evaluate_path):
         os.mkdir(_evaluate_path)
 
@@ -154,6 +158,10 @@ if __name__ == '__main__':
         _version_str = f"{pid}_{bid}b"
         _my_evaluate_path = f"{_evaluate_path}/{_version_str}.json"
         if os.path.exists(_my_evaluate_path):
+            if _final_eval:
+
+                return
+
             if _patch_path is not None and not _patch_valid:
                 print(f"{_version_str} exists")
                 return
@@ -210,13 +218,20 @@ if __name__ == '__main__':
                     continue
                 print("apply_replace_list finished")
                 # try:
-                    # with eventlet.Timeout(600):
+                #     with eventlet.Timeout(600):
                 _run_test_result = project.run_test()
-                if _run_test_result == 'success':
-                    _success_repair = _replace_result
-                    break
                 # except eventlet.Timeout:
                 #     print("execution time out")
+                #     continue
+                if _run_test_result == 'success':
+                    # try:
+                    #     with eventlet.Timeout(1200):
+                    _final_result = project.run_test(relevant=False)
+                    if _final_result == "success":
+                        _success_repair = _replace_result
+                        break
+                    # except eventlet.Timeout:
+                    #     print("execution time out")
         if _success_repair:
             print(f"success {_version_str}")
             with open(_my_evaluate_path, "w") as _f:
