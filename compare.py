@@ -1,3 +1,6 @@
+import matplotlib.pyplot as plt
+
+
 def filter_test_edit(_f: str):
     if not os.path.exists(_f):
         return
@@ -19,6 +22,9 @@ if __name__ == '__main__':
     from dotenv import load_dotenv, find_dotenv
     import os
     import defects4j_utils
+    from collections import defaultdict
+    from pyvenn.venn import venn6
+    from pyvenn.venn import get_labels
 
     _ = load_dotenv(find_dotenv())
     OUTPUT_PATH = os.environ.get("OUTPUT_PATH")
@@ -28,6 +34,7 @@ if __name__ == '__main__':
     _issue_debug_eval_path = f"{OUTPUT_PATH}/EvaluateIssueDebug"
     _eval_path = f"{OUTPUT_PATH}/Evaluate"
     _baseline_debug_eval_path = f"{OUTPUT_PATH}/EvaluateBaselineDebug"
+    _baseline_eval_path = f"{OUTPUT_PATH}/EvaluateBaseline"
     _issue_more_count = 0
     _debug_more_count = 0
     _issue_debug_more_count = 0
@@ -39,6 +46,10 @@ if __name__ == '__main__':
     _final = set()
     _exist_final = set()
 
+    venn_data = [set(), set(), set(), set(), set(), set()]
+    venn_single_func = [set(), set(), set(), set(), set(), set()]
+    venn_multi_func = [set(), set(), set(), set(), set(), set()]
+
     for pid, bid in defects4j_utils.d4j_pids_bids():
         _version_str = f"{pid}_{bid}b"
         _debug_eval_file = f"{_debug_eval_path}/{_version_str}.json"
@@ -46,6 +57,22 @@ if __name__ == '__main__':
         _issue_debug_eval_file = f"{_issue_debug_eval_path}/{_version_str}.json"
         _eval_file = f"{_eval_path}/{_version_str}.json"
         _baseline_debug_eval_file = f"{_baseline_debug_eval_path}/{_version_str}.json"
+        _baseline_eval_file = f"{_baseline_eval_path}/{_version_str}.json"
+        _all_eval = [_eval_file, _issue_eval_file, _debug_eval_file,
+                     _issue_debug_eval_file, _baseline_eval_file, _baseline_debug_eval_file]
+
+
+        def add_venn(_file, index):
+            if available(_file):
+                venn_data[index].add(_version_str)
+                if defects4j_utils.is_single_function_bug(pid, bid):
+                    venn_single_func[index].add(_version_str)
+                else:
+                    venn_multi_func[index].add(_version_str)
+
+
+        for i, _file, in enumerate(_all_eval):
+            add_venn(_file, i)
         if available(_baseline_debug_eval_file):
             _final.add((pid, bid))
         if exists(_baseline_debug_eval_file):
@@ -68,6 +95,16 @@ if __name__ == '__main__':
                 and not available(_issue_eval_file)):
             _normal_more_count += 1
             _normal_more.add(_version_str)
+
+    fig, ax = venn6(get_labels(venn_data),
+                    names=['No extra', 'Issue', 'Debug', 'Issue+Debug', 'Perfect', 'Perfect+Debug'])
+    plt.show()
+    fig1, ax1 = venn6(get_labels(venn_single_func),
+                      names=['No extra', 'Issue', 'Debug', 'Issue+Debug', 'Perfect', 'Perfect+Debug'])
+    plt.show()
+    fig2, ax2 = venn6(get_labels(venn_multi_func),
+                      names=['No extra', 'Issue', 'Debug', 'Issue+Debug', 'Perfect', 'Perfect+Debug'])
+    plt.show()
 
     print("issue more:")
     print(_issue_more_count)
@@ -115,5 +152,6 @@ if __name__ == '__main__':
           f"{_fixed_single_function_count / _exist_single_function_count}")
     print(f"non-single: {_fixed_non_single_count}")
     print(f"single-function more giant: {len(_more_giant)}")
+    print(_more_giant)
     print(f"giant more: {len(_giant_more)}")
-
+    print(_giant_more)
