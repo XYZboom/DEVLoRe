@@ -601,6 +601,13 @@ def can_giant_repair_fix(pid, bid) -> bool:
     pass
 
 
+def is_d4j_1_2(pid, bid) -> bool:
+    if pid in ['Chart', 'Lang', 'Math', 'Mockito', 'Time']:
+        return True
+    if pid == 'Closure':
+        return int(bid) <= 133
+
+
 if __name__ == '__main__':
     print(is_single_function_bug('Chart', 1))
     print(is_single_function_bug('Chart', 14))

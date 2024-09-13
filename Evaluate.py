@@ -114,32 +114,29 @@ if __name__ == '__main__':
     parser.add_argument("--add-issue-info", help="add issue info", default=False)
     parser.add_argument("--use-baseline-method", help="use baseline method", default=False)
     parser.add_argument("--final-eval", help="run all test to evaluate final result", default=False)
+    parser.add_argument("--add-stack-info", help="add stack info", default=False)
     args = parser.parse_args()
     _add_debug = args.add_debug_info
     _add_issue = args.add_issue_info
     _baseline_method = args.use_baseline_method
     _final_eval = args.final_eval
+    _add_stack = args.add_stack_info
 
+    _repair_path = f"{OUTPUT_PATH}/Repair"
+    _evaluate_path = f"{OUTPUT_PATH}/Evaluate"
     if _baseline_method:
-        if _add_debug:
-            _repair_path = f"{OUTPUT_PATH}/RepairBaselineDebug"
-            _evaluate_path = f"{OUTPUT_PATH}/EvaluateBaselineDebug"
-        else:
-            _repair_path = f"{OUTPUT_PATH}/RepairBaseline"
-            _evaluate_path = f"{OUTPUT_PATH}/EvaluateBaseline"
-    elif _add_debug:
-        if not _add_issue:
-            _repair_path = f"{OUTPUT_PATH}/RepairDebug"
-            _evaluate_path = f"{OUTPUT_PATH}/EvaluateDebug"
-        else:
-            _repair_path = f"{OUTPUT_PATH}/RepairIssueDebug"
-            _evaluate_path = f"{OUTPUT_PATH}/EvaluateIssueDebug"
-    elif _add_issue:
-        _repair_path = f"{OUTPUT_PATH}/RepairIssue"
-        _evaluate_path = f"{OUTPUT_PATH}/EvaluateIssue"
-    else:
-        _repair_path = f"{OUTPUT_PATH}/Repair"
-        _evaluate_path = f"{OUTPUT_PATH}/Evaluate"
+        _repair_path += "Baseline"
+        _evaluate_path += "Baseline"
+    if _add_issue:
+        _repair_path += "Issue"
+        _evaluate_path += "Issue"
+    if _add_stack:
+        _repair_path += "Stack"
+        _evaluate_path += "Stack"
+    if _add_debug:
+        _repair_path += "Debug"
+        _evaluate_path += "Debug"
+
     _patch_path = args.patch_dir
     _patch_valid = False if args.patch_valid == 'False' else True
     if _patch_valid and not os.path.exists(_patch_path):

@@ -18,10 +18,7 @@ and exception that occurs when doing the test.
 Provide a set of locations that need to be edited to fix the issue. 
 The locations must be specified as method names or field names.
 ### Skeleton of Classes ###
-{skeleton_of_classes}
-### Failed Test Case(s) and exception ###
-{failed_tests}
-{issue_content}
+{skeleton_of_classes}{failed_tests}{issue_content}
 
 Please provide method names or field names that need to be edited.
 ### Examples:
@@ -47,15 +44,22 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--add-issue-info", help="add issue info", default=False)
+    parser.add_argument("--add-stack-info", help="add stack info", default=False)
     args = parser.parse_args()
     _add_issue = args.add_issue_info
+    _add_stack = args.add_stack_info
 
     if not os.path.exists(f"{D4J_JSON_PATH}/first_step_llm.txt"):
         open(f"{D4J_JSON_PATH}/first_step_llm.txt", "w").close()
     with open(f"{D4J_JSON_PATH}/first_step_llm.txt", "r") as f:
         finished = f.read().splitlines()
 
-    if _add_issue:
+    if _add_stack:
+        if _add_issue:
+            _output_path = f"{OUTPUT_PATH}/LocateMethodIssueStack"
+        else:
+            _output_path = f"{OUTPUT_PATH}/LocateMethodStack"
+    elif _add_issue:
         _output_path = f"{OUTPUT_PATH}/LocateMethodIssue"
     else:
         _output_path = f"{OUTPUT_PATH}/LocateMethod"
@@ -68,9 +72,8 @@ if __name__ == '__main__':
             print(f"{pid}_{bid}b exists.")
             return
         _skeleton_path = f"{D4J_JSON_PATH}/result_skeleton/{pid}_{bid}b.json"
-        _failed_test_path = f"{D4J_JSON_PATH}/result_failed_tests_method_content/{pid}_{bid}b.json"
         _issue_info_path = f"{OUTPUT_PATH}/issue_content/{pid}_{bid}.txt"
-        if not os.path.exists(_skeleton_path) or not os.path.exists(_failed_test_path)\
+        if not os.path.exists(_skeleton_path) \
                 or (not os.path.exists(_issue_info_path) and _add_issue):
             print(f"not enough info for {pid}_{bid}b")
             return
@@ -82,20 +85,24 @@ if __name__ == '__main__':
             f"### {_class} ###\n{_skeleton[_class]}"
             for _class in _skeleton
         ])
-        _failed_tests = defects4j_utils.trigger_test_stacktrace(pid, bid)
-        if not _failed_tests:
-            print(f"no failed test in {pid}_{bid}b")
-            return
         if _add_issue:
             # noinspection PyBroadException
             try:
                 with open(_issue_info_path, "r") as _f:
-                    issue_content = "### issue info ###\n"
+                    issue_content = "\n### issue info ###\n"
                     issue_content += _f.read()
             except:
                 issue_content = ""
         else:
             issue_content = ""
+        if _add_stack:
+            _failed_tests = "\n### Failed Test Case(s) and exception ###\n"
+            _failed_tests += defects4j_utils.trigger_test_stacktrace(pid, bid)
+            if not _failed_tests:
+                print(f"no failed test in {pid}_{bid}b")
+                return
+        else:
+            _failed_tests = ""
         user_prompt = LocateMethodPrompt.format(
             skeleton_of_classes=_skeleton_of_classes,
             failed_tests=_failed_tests,

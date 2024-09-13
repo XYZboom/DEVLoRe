@@ -18,10 +18,7 @@ and exception that occurs when doing the test.
 Provide a set of locations that need to be edited to fix the issue. 
 The locations must be specified as line number in class.
 ### Skeleton of Classes ###
-{skeleton_of_classes}
-### Failed Test Case(s) and exception ###
-{failed_tests}
-{debug_info}
+{skeleton_of_classes}{failed_tests}{debug_info}{issue_info}
 
 Please provide class name and line number that need to be edited.
 ### Examples:
@@ -54,32 +51,35 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--add-debug-info", help="add debug info", default=False)
     parser.add_argument("--add-issue-info", help="add issue info", default=False)
+    parser.add_argument("--add-stack-info", help="add stack info", default=False)
     parser.add_argument("--use-baseline-method", help="use baseline method", default=False)
     args = parser.parse_args()
 
     _add_debug = args.add_debug_info
     _add_issue = args.add_issue_info
+    _add_stack = args.add_stack_info
     _baseline_method = args.use_baseline_method
 
+    _locate_line_path = f"{OUTPUT_PATH}/LocateLine"
+    if _baseline_method:
+        _locate_line_path += "Baseline"
+    if _add_issue:
+        _locate_line_path += "Issue"
+    if _add_stack:
+        _locate_line_path += "Stack"
+    if _add_debug:
+        _locate_line_path += "Debug"
     if _baseline_method:
         _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_baseline"
-        if _add_debug:
-            _locate_line_path = f"{OUTPUT_PATH}/LocateLineBaselineDebug"
-        else:
-            _locate_line_path = f"{OUTPUT_PATH}/LocateLineBaseline"
     elif _add_debug:
         if not _add_issue:
             _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
-            _locate_line_path = f"{OUTPUT_PATH}/LocateLineDebug"
         else:
             _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue"
-            _locate_line_path = f"{OUTPUT_PATH}/LocateLineIssueDebug"
     elif _add_issue:
         _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue"
-        _locate_line_path = f"{OUTPUT_PATH}/LocateLineIssue"
     else:
         _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
-        _locate_line_path = f"{OUTPUT_PATH}/LocateLine"
 
     if not os.path.exists(_locate_line_path):
         os.makedirs(_locate_line_path)
@@ -91,13 +91,14 @@ if __name__ == '__main__':
             return
         _buggy_method_file = f"{_buggy_method_path}/{pid}_{bid}b.json"
         _failed_test_path = f"{D4J_JSON_PATH}/result_failed_tests_method_content/{pid}_{bid}b.json"
-        if not os.path.exists(_buggy_method_file) or not os.path.exists(_failed_test_path):
+        _issue_info_path = f"{OUTPUT_PATH}/issue_content/{pid}_{bid}.txt"
+        if not os.path.exists(_buggy_method_file) or (not os.path.exists(_failed_test_path) and _add_stack):
             print(f"buggy method or failed test of {pid}_{bid}b not exists.")
             return
-        if _add_issue:
-            _debug_file = f"{OUTPUT_PATH}/DebugInfoIssue/{pid}_{bid}b.txt"
-        elif _baseline_method:
+        if _baseline_method:
             _debug_file = f"{OUTPUT_PATH}/DebugInfoBaseline/{pid}_{bid}b.txt"
+        elif _add_issue:
+            _debug_file = f"{OUTPUT_PATH}/DebugInfoIssue/{pid}_{bid}b.txt"
         else:
             _debug_file = f"{OUTPUT_PATH}/DebugInfo/{pid}_{bid}b.txt"
         if not os.path.exists(_debug_file) and _add_debug:
@@ -109,7 +110,7 @@ if __name__ == '__main__':
         _debug_info = ""
         if _add_debug:
             with open(_debug_file, "r") as _f:
-                _debug_info = "### Debug info ###\n"
+                _debug_info = "\n### Debug info ###\n"
                 _debug_info += _f.read()
         print(f"start {pid}_{bid}b")
         chat = Chat.Chat("gpt-4o-mini", SYS_PROMPT)
@@ -119,14 +120,29 @@ if __name__ == '__main__':
             f"### {_class} ###\n{_buggy_method[_class]}"
             for _class in _buggy_method
         ])
-        _failed_tests = defects4j_utils.trigger_test_stacktrace(pid, bid)
-        if not _failed_tests:
-            print(f"no failed test in {pid}_{bid}b")
-            return
+        if _add_issue:
+            # noinspection PyBroadException
+            try:
+                with open(_issue_info_path, "r") as _f:
+                    issue_content = "\n### issue info ###\n"
+                    issue_content += _f.read()
+            except:
+                issue_content = ""
+        else:
+            issue_content = ""
+        if _add_stack:
+            _failed_tests = "\n### Failed Test Case(s) and exception ###\n"
+            _failed_tests += defects4j_utils.trigger_test_stacktrace(pid, bid)
+            if not _failed_tests:
+                print(f"no failed test in {pid}_{bid}b")
+                return
+        else:
+            _failed_tests = ""
         user_prompt = LocateLinePrompt.format(
             skeleton_of_classes=_skeleton_of_classes,
             failed_tests=_failed_tests,
             debug_info=_debug_info,
+            issue_info=issue_content
         )
         try:
             messages = chat.chat(user_prompt, 10)
