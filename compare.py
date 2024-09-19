@@ -47,7 +47,7 @@ if __name__ == '__main__':
     _exist_final = set()
 
     venn_data = [set(), set(), set(), set(), set(), set()]
-    venn_single_func = [set(), set(), set(), set(), set(), set()]
+    venn_single_func = [set(), set(), set(), set(a), set(), set()]
     venn_multi_func = [set(), set(), set(), set(), set(), set()]
 
     for pid, bid in defects4j_utils.d4j_pids_bids():

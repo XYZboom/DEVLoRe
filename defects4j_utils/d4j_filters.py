@@ -1,3 +1,7 @@
+import json
+import os
+
+
 def __in_map(_map):
     def __decorator(func):
         def __my_in_map(pid, bid) -> bool:
@@ -473,7 +477,7 @@ def is_single_function_bug(pid, bid) -> bool:
 
 
 __giant_repair = {
-    'Cli': {'17', '19', '28', '37', '40', '9'},
+    'Cli': {'17', '19', '28', '37', '40', '9', '32'},
     'Closure': {'10',
                 '101',
                 '104',
@@ -508,11 +512,11 @@ __giant_repair = {
                 '78',
                 '86',
                 '92'},
-    'Codec': {'10', '18', '2', '5', '6', '7', '9'},
-    'Compress': {'19', '21', '23', '25', '32', '44', '45', '46', '7'},
+    'Codec': {'10', '18', '2', '5', '6', '7', '9', '4'},
+    'Compress': {'19', '21', '23', '25', '32', '44', '45', '46', '7', '1', '27', '31'},
     'Csv': {'10', '11', '4', '5', '6', '9'},
     'Gson': {'11', '12', '15', '16', '18', '6'},
-    'JacksonCore': {'25', '3', '5', '6', '8'},
+    'JacksonCore': {'25', '3', '5', '6', '8', '11', '20', '7'},
     'JacksonDatabind': {'1',
                         '12',
                         '16',
@@ -544,14 +548,10 @@ __giant_repair = {
               '6',
               '68',
               '80',
-              '90'},
+              '90',
+              '24'},
     'JxPath': {'8'},
-    'cli': {'32'},
-    'codec': {'4'},
-    'compress': {'1', '27', '31'},
-    'jacksoncore': {'11', '20', '7'},
-    'jacksonxml': {'5'},
-    'jsoup': {'24'},
+    'Jacksonxml': {'5'},
     'Chart': {'1', '11', '12', '20', '24', '4', '7', '8'},
     'Lang': {'10',
              '14',
@@ -606,6 +606,30 @@ def is_d4j_1_2(pid, bid) -> bool:
         return True
     if pid == 'Closure':
         return int(bid) <= 133
+
+
+with open(os.path.join(os.path.dirname(__file__), "baseline_data/12_perfect_result.json"), "r") as _f:
+    __12_perfect = json.load(_f)
+with open(os.path.join(os.path.dirname(__file__), "baseline_data/12_sbfl_result.json"), "r") as _f:
+    __12_sbfl = json.load(_f)
+with open(os.path.join(os.path.dirname(__file__), "baseline_data/20_perfect_result.json"), "r") as _f:
+    __20_perfect = json.load(_f)
+__all_projects = set(__12_sbfl.keys()).union(__20_perfect.keys()).union(__12_perfect.keys())
+
+
+def get_baseline_project_names():
+    return __all_projects
+
+
+def can_fix(baseline_name, pid, bid) -> bool:
+    _version_str = f"{pid}_{bid}"
+    if baseline_name in __12_perfect and _version_str in __12_perfect[baseline_name]['bugs']:
+        return True
+    if baseline_name in __20_perfect and _version_str in __20_perfect[baseline_name]['bugs']:
+        return True
+    if baseline_name in __12_sbfl and _version_str in __12_sbfl[baseline_name]['bugs']:
+        return True
+    return False
 
 
 if __name__ == '__main__':
