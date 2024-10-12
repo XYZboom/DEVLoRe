@@ -102,3 +102,9 @@ def is_ori_d4j(_pid, _bid):
     if _pid in __ori_d4j:
         return int(_bid) in __ori_d4j[_pid]
     return False
+
+
+def ori_d4j_pids_bids():
+    for _pid in __ori_d4j:
+        for _bid in __ori_d4j[_pid]:
+            yield _pid, str(_bid)

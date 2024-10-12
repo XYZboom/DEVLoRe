@@ -24,15 +24,21 @@ if __name__ == '__main__':
     parser.add_argument("--add-debug-info", help="add debug info", default=False)
     parser.add_argument("--add-issue-info", help="add issue info", default=False)
     parser.add_argument("--use-baseline-method", help="use baseline method", default=False)
+    parser.add_argument("--add-stack-info", help="add stack info", default=False)
     args = parser.parse_args()
 
     _add_debug = args.add_debug_info
     _add_issue = args.add_issue_info
+    _add_stack = args.add_stack_info
     _baseline_method = args.use_baseline_method
 
     if _add_issue:
-        _debug_info_path = f"{OUTPUT_PATH}/DebugInfoIssue"
-        _locate_path = f"{OUTPUT_PATH}/LocateMethodIssue"
+        if _add_stack:
+            _debug_info_path = f"{OUTPUT_PATH}/DebugInfoIssueStack"
+            _locate_path = f"{OUTPUT_PATH}/LocateMethodIssueStack"
+        else:
+            _debug_info_path = f"{OUTPUT_PATH}/DebugInfoIssue"
+            _locate_path = f"{OUTPUT_PATH}/LocateMethodIssue"
     elif _baseline_method:
         _debug_info_path = f"{OUTPUT_PATH}/DebugInfoBaseline"
         _locate_path = f"{OUTPUT_PATH}/PatchMethodLocations"

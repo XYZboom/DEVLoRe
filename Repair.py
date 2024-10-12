@@ -137,7 +137,10 @@ if __name__ == '__main__':
         if _baseline_method:
             _debug_file = f"{OUTPUT_PATH}/DebugInfoBaseline/{pid}_{bid}b.txt"
         elif _add_issue:
-            _debug_file = f"{OUTPUT_PATH}/DebugInfoIssue/{pid}_{bid}b.txt"
+            if not _add_stack:
+                _debug_file = f"{OUTPUT_PATH}/DebugInfoIssue/{pid}_{bid}b.txt"
+            else:
+                _debug_file = f"{OUTPUT_PATH}/DebugInfoIssueStack/{pid}_{bid}b.txt"
         else:
             _debug_file = f"{OUTPUT_PATH}/DebugInfo/{pid}_{bid}b.txt"
         if not os.path.exists(_debug_file) and _add_debug:

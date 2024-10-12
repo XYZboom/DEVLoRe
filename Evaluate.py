@@ -219,7 +219,8 @@ if __name__ == '__main__':
                         _run_test_result = project.run_test()
                 except eventlet.Timeout:
                     print("execution time out")
-                    continue
+                    # continue
+                    break
                 if _run_test_result == 'success':
                     try:
                         with eventlet.Timeout(1200):
@@ -229,6 +230,7 @@ if __name__ == '__main__':
                                 break
                     except eventlet.Timeout:
                         print("execution time out")
+                        break
         if _success_repair:
             print(f"success {_version_str}")
             with open(_my_evaluate_path, "w") as _f:
@@ -239,18 +241,18 @@ if __name__ == '__main__':
             print(f"fail {_version_str}")
             open(_my_evaluate_path, "w").close()
 
-    _all_pd = list(defects4j_utils.d4j_pids_bids())
-    for pid, bid in tqdm(_all_pd, desc="Evaluate"):
-        evaluate(pid, bid)
-    # with concurrent.futures.ThreadPoolExecutor(
-    #         max_workers=64
-    # ) as executor:
-    #     futures = [
-    #         executor.submit(
-    #             evaluate,
-    #             pid,
-    #             bid
-    #         )
-    #         for pid, bid in list(defects4j_utils.d4j_pids_bids())
-    #     ]
-    #     concurrent.futures.wait(futures)
+    # _all_pd = list(defects4j_utils.d4j_pids_bids())
+    # for pid, bid in tqdm(_all_pd, desc="Evaluate"):
+    #     evaluate(pid, bid)
+    with concurrent.futures.ThreadPoolExecutor(
+            max_workers=64
+    ) as executor:
+        futures = [
+            executor.submit(
+                evaluate,
+                pid,
+                bid
+            )
+            for pid, bid in list(defects4j_utils.d4j_pids_bids())
+        ]
+        concurrent.futures.wait(futures)

@@ -45,7 +45,7 @@ if __name__ == '__main__':
     _giant_set = set()
     _12_single_func_dict = defaultdict(set)
 
-    for pid, bid in defects4j_utils.d4j_pids_bids():
+    for pid, bid in defects4j_utils.ori_d4j_pids_bids():
         _version_str = f"{pid}_{bid}b"
         if defects4j_utils.can_giant_repair_fix(pid, bid):
             if defects4j_utils.is_single_function_bug(pid, bid):
@@ -134,6 +134,7 @@ if __name__ == '__main__':
     _names6_in[0] = 'Ours'
     _names6_in[1:5] = list(i[0] for i in sorted_12_single_func[:4])
     fig6, ax6 = venn5(get_labels(_label6_in), names=_names6_in)
+    plt.savefig("topAprs.pdf")
     plt.show()
 
     _label6_in[4] = non_top4_12_single_func

@@ -41,16 +41,25 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--add-issue-info", help="add issue info", default=False)
     parser.add_argument("--use-baseline-method", help="use baseline method", default=False)
+    parser.add_argument("--add-stack-info", help="add stack info", default=False)
     args = parser.parse_args()
     _add_issue = args.add_issue_info
+    _add_stack = args.add_stack_info
     _baseline_method = args.use_baseline_method
 
     if _baseline_method:
         _locate_output_path = f"{OUTPUT_PATH}/PatchMethodLocations"
         _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_baseline"
     elif _add_issue:
-        _locate_output_path = f"{OUTPUT_PATH}/LocateMethodIssue"
-        _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue"
+        if _add_stack:
+            _locate_output_path = f"{OUTPUT_PATH}/LocateMethodIssueStack"
+            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue_stack"
+        else:
+            _locate_output_path = f"{OUTPUT_PATH}/LocateMethodIssue"
+            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue"
+    elif _add_stack:
+        _locate_output_path = f"{OUTPUT_PATH}/LocateMethodStack"
+        _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_stack"
     else:
         _locate_output_path = f"{OUTPUT_PATH}/LocateMethod"
         _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
