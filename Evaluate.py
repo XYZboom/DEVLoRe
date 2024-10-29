@@ -235,8 +235,6 @@ if __name__ == '__main__':
             print(f"fail {_version_str}")
             open(_my_evaluate_path, "w").close()
 
-    evaluate("Cli", "5")
-    exit(0)
     # _all_pd = list(defects4j_utils.d4j_pids_bids())
     # for pid, bid in tqdm(_all_pd, desc="Evaluate"):
     #     evaluate(pid, bid)
