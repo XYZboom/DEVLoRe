@@ -1,0 +1,21 @@
+diff --git a/src/java/org/apache/commons/lang3/StringUtils.java b/src/java/org/apache/commons/lang3/StringUtils.java
+index 14563aa6..2d12a357 100644
+--- a/src/java/org/apache/commons/lang3/StringUtils.java
++++ b/src/java/org/apache/commons/lang3/StringUtils.java
+@@ -3673,7 +3673,8 @@ public class StringUtils {
+
+         // count the replacement text elements that are larger than their corresponding text being replaced
+         for (int i = 0; i < searchList.length; i++) {
+-            int greater = replacementList[i].length() - searchList[i].length();
++            int greater = (replacementList[i] != null ? replacementList[i].length() : 0) - searchList[i].length();
++
+             if (greater > 0) {
+                 increase += 3 * greater; // assume 3 matches
+             }
+@@ -5834,4 +5835,4 @@ public class StringUtils {
+         return str.regionMatches(ignoreCase, strOffset, suffix, 0, suffix.length());
+     }
+ 
+-}
++}
+\ No newline at end of file
