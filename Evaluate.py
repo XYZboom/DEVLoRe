@@ -146,8 +146,6 @@ if __name__ == '__main__':
 
     all_count = 0
     fixed_count = 0
-    all_count_lock = threading.Lock()
-    fixed_count_lock = threading.Lock()
     eventlet.monkey_patch()
 
     def evaluate(pid, bid):
@@ -175,8 +173,6 @@ if __name__ == '__main__':
         _my_repair_path = f"{_repair_path}/{_version_str}.json"
         if not os.path.isfile(_my_repair_path):
             return
-        with all_count_lock:
-            all_count += 1
         with open(_my_repair_path, "r") as f:
             _repairs_json = json.load(f)
         _repairs = []
@@ -235,12 +231,12 @@ if __name__ == '__main__':
             print(f"success {_version_str}")
             with open(_my_evaluate_path, "w") as _f:
                 json.dump(_success_repair, _f)
-            with fixed_count_lock:
-                fixed_count += 1
         else:
             print(f"fail {_version_str}")
             open(_my_evaluate_path, "w").close()
 
+    evaluate("Cli", "5")
+    exit(0)
     # _all_pd = list(defects4j_utils.d4j_pids_bids())
     # for pid, bid in tqdm(_all_pd, desc="Evaluate"):
     #     evaluate(pid, bid)
@@ -253,6 +249,6 @@ if __name__ == '__main__':
                 pid,
                 bid
             )
-            for pid, bid in list(defects4j_utils.d4j_pids_bids())
+            for pid, bid in list(defects4j_utils.ori_d4j_pids_bids())
         ]
         concurrent.futures.wait(futures)

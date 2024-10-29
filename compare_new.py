@@ -104,9 +104,10 @@ if __name__ == '__main__':
         print(f"{_name}: {len(_single)}/{len(_single_all)}={len(_single) / len(_single_all) * 100:.2f}%,"
               f"{len(_multi)}/{len(_multi_all)}={len(_multi) / len(_multi_all) * 100:.2f}%")
 
-    # fig, ax = venn4(get_labels(venn_data[0:4]),
-    #                 names=['No extra', 'Issue', 'Debug', 'Stack'])
-    # plt.show()
+    fig, ax = venn4(get_labels(venn_data[0:4]),
+                    names=['No extra', 'Issue', 'Debug', 'Stack'])
+    plt.savefig("method_level.pdf")
+    plt.show()
     # fig1, ax1 = venn4(get_labels(venn_single_func[0:4]),
     #                   names=['No extra', 'Issue', 'Debug', 'Stack'])
     # plt.show()

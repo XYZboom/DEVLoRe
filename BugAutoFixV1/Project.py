@@ -86,26 +86,39 @@ class Project:
             _ori_content = _f.read()
             _ori_lines = _ori_content.splitlines()
         _line_number_ori = len(_ori_lines)
-        _replace_line_index = -1
-        _replace_lines = _replace[self.SEARCH_KEY].splitlines()
-        for line_index, _ in enumerate(_ori_lines[:-len(_replace_lines)]):
+        _search_line_index = -1
+        _search_lines = _replace[self.SEARCH_KEY].splitlines()
+        for line_index, _ in enumerate(_ori_lines[:-len(_search_lines)]):
             #                                     ^^^^^^^^^^^^^^^^^^^^
             # if remain lines count > replace lines count, no more lines could be replaced.
             found = True
 
-            for _ori_line, _replace_line in zip(_ori_lines[line_index:line_index + len(_replace_lines)],
-                                                _replace_lines):
-                _trimmed_replace_line = _replace_line.strip()
+            for _ori_line, _search_line in zip(_ori_lines[line_index:line_index + len(_search_lines)],
+                                               _search_lines):
+                _ori_line: str
+                _search_line: str
+                if _ori_line.split("|")[0].isdigit():
+                    _ori_line = _ori_line.split("|")[1]
+                if _search_line.split("|")[0].isdigit():
+                    _search_line = _search_line.split("|")[1]
+
+                _trimmed_replace_line = _search_line.strip()
                 _trimmed_ori_line = _ori_line.strip()
                 if _trimmed_replace_line != _trimmed_ori_line:
                     found = False
             if found:
-                _replace_line_index = line_index
+                _search_line_index = line_index
                 break
-        if _replace_line_index == -1:
+        if _search_line_index == -1:
             raise Exception("No matching lines found")
-        _ori_lines[_replace_line_index + 1:_replace_line_index + len(_replace_lines)] = []
-        _ori_lines[_replace_line_index] = _replace[self.REPLACE_KEY] + "\n"
+        _replace_lines = _replace[self.REPLACE_KEY].splitlines()
+        for i, _search_line in enumerate(_replace_lines):
+            if _search_line.split("|")[0].isdigit():
+                _search_line = _search_line.split("|")[1]
+                _replace_lines[i] = _search_line
+        _ori_lines[_search_line_index + 1:_search_line_index + len(_search_lines)] = []
+        # _ori_lines[_search_line_index] = _replace[self.REPLACE_KEY] + "\n"
+        _ori_lines[_search_line_index] = "\n".join(_replace_lines) + "\n"
         with open(_file, "w") as _f:
             if "\r" in _ori_content:
                 _f.write("\r\n".join(_ori_lines))
