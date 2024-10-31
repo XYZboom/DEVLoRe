@@ -107,7 +107,7 @@ if __name__ == '__main__':
     #     except Exception as e:
     #         traceback.print_exc()
     with concurrent.futures.ThreadPoolExecutor(
-            max_workers=16
+            max_workers=32
     ) as executor:
         futures = [
             executor.submit(

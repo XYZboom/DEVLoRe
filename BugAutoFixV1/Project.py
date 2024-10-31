@@ -30,6 +30,7 @@ if not D4J_EXEC:
     raise Exception("D4J_EXEC env variable is not set")
 D4J_FAILING_TEST = "failing_tests"
 DEBUG_LOG_NAME = "bugDetect.log"
+ORI_DEBUG_LOG_NAME = "bugDetectOri.log"
 
 
 class Project:
@@ -276,6 +277,16 @@ class Project:
             if os.path.exists(_last_debug_file):
                 with open(_last_debug_file, "r") as f:
                     _result += f.read()
+        if len(_result) == 0:
+            print("try use ori")
+            _base_debug_file = os.path.join(self.base_dir, ORI_DEBUG_LOG_NAME)
+            with open(_base_debug_file, "r") as f:
+                _result = f.read()
+            if os.path.getsize(_base_debug_file) < 5 * 1024:
+                _last_debug_file = os.path.join(self.base_dir, ORI_DEBUG_LOG_NAME + ".1")
+                if os.path.exists(_last_debug_file):
+                    with open(_last_debug_file, "r") as f:
+                        _result += f.read()
         return _result
 
     def debug_info(
