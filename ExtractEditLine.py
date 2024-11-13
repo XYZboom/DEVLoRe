@@ -13,8 +13,9 @@ if __name__ == '__main__':
     _edit_line_path = f"{OUTPUT_PATH}/FixEditLine"
     if not os.path.exists(_edit_line_path):
         os.makedirs(_edit_line_path)
-    _diff_pattern = re.compile(r"--- a/(.*)\n\+\+\+ b/(.*)\n")
-    _diff_split_pattern = re.compile(r"--- a/.*\n\+\+\+ b/.*\n")
+    # (?:xxx) 用于匹配xxx但是不捕获
+    _diff_pattern = re.compile(r"--- (?:a/(.*)|([a-zA-Z/]+\.java).*)\n\+\+\+ (?:b/(.*)|([a-zA-Z/]+\.java).*)\n")
+    _diff_split_pattern = re.compile(r"--- (?:a/.*|[a-zA-Z/]+\.java.*)\n\+\+\+ (?:b/.*|[a-zA-Z/]+\.java.*)\n")
     _line_pattern = re.compile(r"@@ -(\d+),(\d+) \+(\d+),(\d+)")
 
     def do_extract(_pid, _bid):
@@ -33,9 +34,9 @@ if __name__ == '__main__':
         _result = []
         for _match, _diff_content in zip(_matches, _diff_split[1:]):
             _match_text = _match.groups()
-            if _match_text[0] != _match_text[1]:
+            if _match_text[0] != _match_text[2] or _match_text[1] != _match_text[3]:
                 continue
-            _edit_file = _match_text[0]
+            _edit_file = _match_text[0] if _match_text[0] else _match_text[1]
             _diff_matches = re.finditer(_line_pattern, _diff_content)
             for _diff_match in _diff_matches:
                 _diff_match_text = _diff_match.groups()
@@ -71,11 +72,10 @@ if __name__ == '__main__':
                 if _result_start == -1:
                     raise Exception()
                 _result_start += int(_diff_match_text[2]) - _start_line
-                _result.append([_match_text[0], _result_start, _result_start])  # 兼容性填充
+                _result.append([_edit_file, _result_start, _result_start])  # 兼容性填充
         with open(_result_path, "w") as f:
             json.dump(_result, f)
         # print(f"{_version_str} done")
-
 
     all_ids = list(defects4j_utils.d4j_pids_bids())
     for pid, bid in tqdm.tqdm(all_ids, desc=f"Extract edit line", unit="step"):

@@ -224,6 +224,11 @@ class Project:
                 os.remove(os.path.join(self.base_dir, DEBUG_LOG_NAME))
             except Exception as _:
                 pass
+            # noinspection PyBroadException
+            try:
+                os.remove(os.path.join(self.base_dir, ORI_DEBUG_LOG_NAME))
+            except Exception as _:
+                pass
         if single_test:
             result = subprocess.run(f"{D4J_EXEC} test -t {single_test}", shell=True,
                                     stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.base_dir)

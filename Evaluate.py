@@ -5,13 +5,12 @@ from tqdm import tqdm
 import traceback
 import subprocess
 import tempfile
+import load_env
 from BugAutoFixV1.Project import Project
 
 import defects4j_utils
 
-from dotenv import load_dotenv, find_dotenv
-
-_ = load_dotenv(find_dotenv())
+load_env.load_env()
 D4J_EXEC = os.environ.get("DEFECTS4J_EXEC")
 D4J_JSON_PATH = os.environ.get("D4J_JSON_PATH")
 OUTPUT_PATH = os.environ.get("OUTPUT_PATH")
