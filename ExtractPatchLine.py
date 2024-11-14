@@ -54,7 +54,7 @@ if __name__ == '__main__':
     #         print(pid, bid)
     #         traceback.print_exc()
     with concurrent.futures.ThreadPoolExecutor(
-            max_workers=4
+            max_workers=64
     ) as executor:
         futures = [
             executor.submit(
