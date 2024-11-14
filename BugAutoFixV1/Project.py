@@ -11,32 +11,47 @@ from pydantic import BaseModel, Field
 import argparse
 import javalang
 
+#加载环境变量
 _ = load_dotenv(find_dotenv())
 
+#设置忽略路径
 ignore_paths = ["/.git", "/.classes.tmp", "/target", "/.idea"]
+
+#设置命令行解释器,添加各个子命令
 project_parser = argparse.ArgumentParser(description="Command in project", exit_on_error=False)
 subparsers = project_parser.add_subparsers(dest="subcommand")  # save subcommands in "args.subcommand"
 
+#子命令解释器,用于展示项目中所有文件\文件计数以及运行测试
 all_files_parser = subparsers.add_parser("all_files", help="Show all files in project")
 count_files_parser = subparsers.add_parser("count_files", help="Count all files in project")
 run_test_parser = subparsers.add_parser("run_test", help="Run test in project, return value is test result.")
 # undo_all_parser = subparsers.add_parser("undo_all", help="Undo all changes.")
+
+#缺陷相关配置键
 D4J_RELEVANT_KEY = "d4j.classes.relevant"
 D4J_SRC_PATH_KEY = "d4j.dir.src.classes"
 D4J_TEST_PATH_KEY = "d4j.dir.src.tests"
 D4J_TRIGGER_KEY = "d4j.tests.trigger"
+
+#从环境变量中获取D4J的路径
 D4J_EXEC = os.environ.get("DEFECTS4J_EXEC")
 if not D4J_EXEC:
     raise Exception("D4J_EXEC env variable is not set")
+
+#定义日志和失败测试文件名
 D4J_FAILING_TEST = "failing_tests"
 DEBUG_LOG_NAME = "bugDetect.log"
 
-
+#定义Project类
 class Project:
+
+    #在 Project 类中，这些 KEY 作为常量，便于在类的其他方法中引用这些字符串，统一且清晰地表述不同字段的含义
+    #保存修改结果用的
     SEARCH_KEY = "search"
     REPLACE_KEY = "replace"
     CLASS_KEY = "class"
 
+    #类的入口
     def __init__(self, base_dir: str):
         self.base_dir = base_dir
         self._files = []
@@ -51,64 +66,87 @@ class Project:
         self._trigger_test_methods = self._d4j_configs.get(D4J_TRIGGER_KEY)
         self._trigger_tests = [self._trigger_test_methods.split("::")[0]
                                for _test_method in self._trigger_test_methods.split(",")]
+        #遍历base目录,过滤过滤路径当中的目录
         for path, dirs, files in os.walk(base_dir):
             ignore = False
+            # 给ignore_path中的项添加ignore标记
             for ignore_path in ignore_paths:
                 if path.removeprefix(base_dir).startswith(ignore_path):
                     ignore = True
                     break
             if ignore:
                 continue
+            #Java文件处理
             for f in files:
                 if f.endswith(".java"):
+                    #路径转换:将文件路径转换成项目当中的相对路径
+                    #把路径转换成可以引用的java类名格式
                     _f_path = os.path.join(path.replace(base_dir, ''), f)
                     _class_name = _f_path.removesuffix(".java").removesuffix("/").removeprefix("/")
                     _class_name = re.sub(f"^.*?{self._src_path}", "", _class_name)
                     _class_name = re.sub(f"^.*?{self._test_path}", "", _class_name)
                     _class_name = _class_name.removesuffix("/").removeprefix("/").replace("/", ".")
+                    #如果提取的类是相关类,那么将_f_path添加到_files中
                     if _class_name in self._relevant_classes or _class_name in self._trigger_tests:
                         self._files.append(_f_path)
+        #没找到相关类就会raise exception
         if len(self._files) == 0:
             raise Exception(f"No files found in {base_dir}")
-
+        
+    #应用替换操作的核心部分(这里替换的是correct前后的内容吗)
+    #此处_replace_list:List用于表示这是一个列表,Dict表示这个列表每个元素都是一个键值对,Literal限制了这个键值对键的取值,str说明了值必须是字符串类型
+    #定义了广义替换操作
     def apply_replace_list(self, _replace_list: List[Dict[Literal["replace", "search", "class"], str]]):
         for _replace in _replace_list:
             self.apply_replace(_replace)
 
+    #定义了具体替换操作
     def apply_replace(self, _replace: Dict[str, str]):
+        #从字典中获取类名,如果类名中包含test或Test,那么直接返回,不对测试类文件进行替换  
         _class_name = _replace[self.CLASS_KEY]
         if "test" in _class_name or "Test" in _class_name:
             return
         _file = self.find_file(_class_name.replace(".", "/") + ".java")
         if "test" in _file or "Test" in _file:
             return
+        #文件内容处理与预处理
         with open(_file, "r") as _f:
             _ori_content = _f.read()
-            _ori_lines = _ori_content.splitlines()
-        _line_number_ori = len(_ori_lines)
+            _ori_lines = _ori_content.splitlines()#移除换行符,返回每一行内容的列表
+        _line_number_ori = len(_ori_lines)#定义line_number,值为ori_lines的长度
         _search_line_index = -1
         _search_lines = _replace[self.SEARCH_KEY].splitlines()
+        #查找要替换的行 
+        #这行代码的作用是遍历 _ori_lines 的指定部分，为后续逐行匹配 _search_lines 提供 line_index 起始位置
+        #使得从 line_index 开始可以完整地匹配 _search_lines 的内容
         for line_index, _ in enumerate(_ori_lines[:-len(_search_lines)]):
             #                                     ^^^^^^^^^^^^^^^^^^^^
             # if remain lines count > replace lines count, no more lines could be replaced.
             found = True
-
+            # 从 line_index 开始，对比 _ori_lines 和 _search_lines 的每一行内容
             for _ori_line, _search_line in zip(_ori_lines[line_index:line_index + len(_search_lines)],
                                                _search_lines):
+                 # 指定 _ori_line 和 _search_line 为字符串类型
                 _ori_line: str
                 _search_line: str
+                # 如果 _ori_line 或 _search_line 以行号开头，将其去除（仅保留内容部分）
                 if _ori_line.split("|")[0].isdigit():
                     _ori_line = _ori_line.split("|")[1]
                 if _search_line.split("|")[0].isdigit():
                     _search_line = _search_line.split("|")[1]
 
+                # 去除前后空格，以便后续准确地比较两行内容
                 _trimmed_replace_line = _search_line.strip()
                 _trimmed_ori_line = _ori_line.strip()
+
+                # 如果内容不匹配，标记 found 为 False，停止进一步检查
                 if _trimmed_replace_line != _trimmed_ori_line:
                     found = False
+            # 如果所有行都匹配，将 _search_line_index 设置为当前的 line_index 并退出循环
             if found:
                 _search_line_index = line_index
                 break
+        # 如果未找到匹配项，抛出异常，提示未找到匹配行
         if _search_line_index == -1:
             raise Exception("No matching lines found")
         _replace_lines = _replace[self.REPLACE_KEY].splitlines()
@@ -118,16 +156,21 @@ class Project:
                 _replace_lines[i] = _search_line
         _ori_lines[_search_line_index + 1:_search_line_index + len(_search_lines)] = []
         # _ori_lines[_search_line_index] = _replace[self.REPLACE_KEY] + "\n"
+        # 将 _replace_lines 插入到 _ori_lines 中，替换原有内容
         _ori_lines[_search_line_index] = "\n".join(_replace_lines) + "\n"
+        # 将修改后的内容写回文件，保持换行符格式一致（\r\n 或 \n）
         with open(_file, "w") as _f:
             if "\r" in _ori_content:
                 _f.write("\r\n".join(_ori_lines))
             else:
                 _f.write("\n".join(_ori_lines))
 
+    #返回self中的一个值,包括触发测试的方法列表
     def trigger_test_methods(self):
         return self._trigger_test_methods
 
+    ## 遍历当前项目中所有文件名，查找与给定文件名匹配的文件
+    #找到文件那么就返回绝对路径,找不到的话就抛出FileNotFoundError
     def find_file(self, file: str) -> str:
         for f_name in self._files:
             if f_name.endswith(file) or f_name.replace("/java", "").endswith(file):
@@ -139,11 +182,13 @@ class Project:
                                                         "org/jetbrains/java/PsiClass.java"],
                         contain_line_number: Annotated[bool, "True if the return string contains line number"] = False,
                         ) -> str:
+        # 使用 find_file 函数找到指定文件的路径
         file_path = self.find_file(file_path)
         with open(file_path, "r") as f:
             lines = f.readlines()
         if contain_line_number:
             lines = [str(line_num + 1) + "|" + line for line_num, line in enumerate(lines)]
+        # 返回拼接后的所有行内容
         return "".join(lines)
 
     def content_of_method(
@@ -152,26 +197,46 @@ class Project:
             class_name: Annotated[str, "The class name which contains the method you want."],
             method_name: Annotated[str, "The method name."]
     ) -> str:
+        # 获取文件内容
         _content = self.content_of_file(file_path)
+        
+        # 使用 javalang 解析 Java 源代码结构
         _tree = javalang.parse.parse(_content)
+
+        # 获取类名（可能包含包路径），仅提取类的基本名称
         class_name = class_name.split(".")[-1]
+        
+        # 在解析树中查找指定的类，确保类名与提供的名称匹配
         _classes = [clazz for clazz in _tree.types if clazz.name == class_name]
         if len(_classes) == 0:
             raise Exception(f"No class named {class_name} in {file_path}")
+        
+        #提取到的类的定义
         _class = _classes[0]
+        
+        #在类的定义中查找指定的方法名称
         _methods = [method for method in _class.methods if method.name == method_name]
         if len(_methods) == 0:
             raise Exception(f"No method named {method_name} in {file_path}")
+        
+        #获取方法的定义
         _method = _methods[0]
+
+        #将文件内容按行分隔为列表
         _content_lines = _content.splitlines()
+
+        #计算方法开始和结束的行号(从开始行从方法的位置信息中获取,结束行依据方法体最后一行推断)
         _start_line = _method.position.line - 1
         _end_line = min(_method.body[-1].position.line + 2, len(_content_lines))
+
+        #提取方法体的所有行
         _result_lines = _content_lines[_start_line:_end_line]
         _result = ""
         for index, line in enumerate(_result_lines):
             _result += line + "// line " + str(index + _start_line + 1) + "\n"
         return _result
 
+    #在指定的文件特定行范围内替换内容.文件修改后会重新写入,保存修改
     def modify_file(
             self,
             file_path: Annotated[str, "Path of file to change."],
@@ -179,6 +244,7 @@ class Project:
             end_line: Annotated[int, "End line number to replace with new code."],
             new_code: Annotated[str, "New piece of code to replace old code with. Remember about providing indents."],
     ) -> str:
+    #检查文件中路径中是否包含"test"关键字,如果是不允许修改测试文件
         if "test" in file_path or "Test" in file_path:
             raise Exception("Test files can not be modified")
         file_path = self.find_file(file_path)
@@ -208,9 +274,11 @@ class Project:
                        stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.base_dir)
         return "undo all success"
 
+    #返回str列表(文件列表)
     def all_files(self) -> List[str]:
         return self._files
 
+    #
     def run_test(self, delete_last_log=True, single_test: str = None, relevant=True):
         # noinspection PyBroadException
         try:

@@ -1,5 +1,5 @@
 from typing import Annotated, Literal
-
+# annotated是一种新型注解,Literal用于限制变量的取值
 Operator = Literal["+", "-", "*", "/"]
 import sys
 import os
