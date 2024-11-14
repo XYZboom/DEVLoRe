@@ -108,3 +108,30 @@ def ori_d4j_pids_bids():
     for _pid in __ori_d4j:
         for _bid in __ori_d4j[_pid]:
             yield _pid, str(_bid)
+
+
+__apr2024 = {
+    'AaltoXml': [10, 11],
+    'Beanutils': list(range(1, 18 + 1)) + list(range(20, 21 + 1)) + list(range(23, 29 + 1)),
+    'Cli': [50, 51],
+    'Dbcp': list(range(1, 7 + 1)) + list(range(9, 19 + 1)),
+    'Fileupload': [1, 2],
+    'Graph': [6],
+    'Hugegraph_common': list(range(1, 5 + 1)),
+    'Imaging': [16],
+    'Mrunit': [3, 4, 5, 6],
+    'Pool': [31, 32, 33, 34, 35],
+    'Rng_sampling': [1, 2],
+    'Scxml': list(range(1, 12 + 1)) + [14, 16, 18, 20, 22, 25, 27, 31] + list(range(33, 42 + 1)),
+    'Xbean_reflect': [1, 2],
+}
+
+
+def apr2024_pids_bids():
+    for _pid in __apr2024:
+        for _bid in __apr2024[_pid]:
+            yield _pid, str(_bid)
+
+
+if __name__ == '__main__':
+    print(len(list(apr2024_pids_bids())))
