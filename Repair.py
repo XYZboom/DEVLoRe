@@ -91,16 +91,12 @@ if __name__ == '__main__':
 
     if _baseline_method:
         _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_baseline"
-    elif _add_debug:
-        if not _add_issue:
-            # debug info is not used in locate method level
-            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
-        else:
-            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue"
-    elif _add_issue:
-        _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue"
     else:
         _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
+    if _add_issue:
+        _buggy_method_path += "_issue"
+    if _add_stack:
+        _buggy_method_path += "_stack"
 
     if not os.path.exists(_repair_path):
         os.makedirs(_repair_path)
