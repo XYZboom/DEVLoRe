@@ -1,7 +1,7 @@
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 
 if __name__ == '__main__':
-    from pyvenn.venn import venn4, venn2, venn3, get_labels
+    # from pyvenn.venn import venn4, venn2, venn3, get_labels
     from dotenv import load_dotenv, find_dotenv
     import os
     import re
@@ -64,14 +64,14 @@ if __name__ == '__main__':
                 print(pid, bid, _locate_method_path)
                 traceback.print_exc()
 
-    venn4(get_labels(_single_available_set), ['Issue+Stack', 'Issue', 'Stack', 'No extra'])
-    plt.show()
-    venn2(get_labels([_single_available_set[1], _single_available_set[2]]), ['Issue', 'Stack'])
-    plt.show()
-    venn4(get_labels(_multi_available_set), ['Issue+Stack', 'Issue', 'Stack', 'No extra'])
-    plt.show()
-    venn2(get_labels([_multi_available_set[1], _multi_available_set[2]]), ['Issue', 'Stack'])
-    plt.show()
+    # venn4(get_labels(_single_available_set), ['Issue+Stack', 'Issue', 'Stack', 'No extra'])
+    # plt.show()
+    # venn2(get_labels([_single_available_set[1], _single_available_set[2]]), ['Issue', 'Stack'])
+    # plt.show()
+    # venn4(get_labels(_multi_available_set), ['Issue+Stack', 'Issue', 'Stack', 'No extra'])
+    # plt.show()
+    # venn2(get_labels([_multi_available_set[1], _multi_available_set[2]]), ['Issue', 'Stack'])
+    # plt.show()
     for _locate_method_path, _mall, _mavailable, _sall, _savailable, _all, _all_available in (
             zip(_paths, _multi_all_set, _multi_available_set, _single_all_set, _single_available_set,
                 _all_set, _all_available_set)):

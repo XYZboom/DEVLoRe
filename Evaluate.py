@@ -246,6 +246,6 @@ if __name__ == '__main__':
                 pid,
                 bid
             )
-            for pid, bid in list(defects4j_utils.ori_d4j_pids_bids())
+            for pid, bid in list(defects4j_utils.apr2024_pids_bids())
         ]
         concurrent.futures.wait(futures)

@@ -69,19 +69,15 @@ if __name__ == '__main__':
         _locate_line_path += "Stack"
     if _add_debug:
         _locate_line_path += "Debug"
+
     if _baseline_method:
         _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_baseline"
-    elif _add_debug:
-        if not _add_issue:
-            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
-        elif _add_stack:
-            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue_stack"
-        else:
-            _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue"
-    elif _add_issue:
-        _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_issue"
     else:
         _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
+    if _add_issue:
+        _buggy_method_path += "_issue"
+    if _add_stack:
+        _buggy_method_path += "_stack"
 
     if not os.path.exists(_locate_line_path):
         os.makedirs(_locate_line_path)
@@ -176,6 +172,6 @@ if __name__ == '__main__':
                 pid,
                 bid
             )
-            for pid, bid in defects4j_utils.d4j_pids_bids()
+            for pid, bid in defects4j_utils.apr2024_pids_bids()
         ]
         concurrent.futures.wait(futures)

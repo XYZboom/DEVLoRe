@@ -135,3 +135,6 @@ def apr2024_pids_bids():
 
 if __name__ == '__main__':
     print(len(list(apr2024_pids_bids())))
+    for pid, bid in apr2024_pids_bids():
+        print(pid, bid)
+        print(trigger_test_stacktrace(pid, bid))
