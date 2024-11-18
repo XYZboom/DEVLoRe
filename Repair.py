@@ -13,16 +13,15 @@ EXTRACT_JAR_PATH = os.environ.get("EXTRACT_JAR_PATH")
 D4J_TRIGGER_KEY = "d4j.tests.trigger"
 D4J_RELEVANT_KEY = "d4j.classes.relevant"
 
-LocateLinePrompt = """Review the following methods and(or) fields of classes, test case(s), 
+RepairPrompt = """Review the following methods and(or) fields of classes, test case(s), 
 and exception that occurs when doing the test.
-Provide a set of locations that need to be edited to fix the issue. 
-The locations must be specified as line number in class.
+Try to fix the bug.
 ### Skeleton of Classes ###
 {skeleton_of_classes}{failed_tests}
 ### Possible bug locations (for your reference only) ###
 {possible_bug_locations}{debug_info}{issue_info}
 
-Please first localize the bug based on the issue statement, and then generate *SEARCH/REPLACE* edits to fix the issue.
+Please generate *SEARCH/REPLACE* edits to fix the bug based on the info given above.
 
 Every *SEARCH/REPLACE* edit must use this format:
 1. The file path
@@ -50,7 +49,6 @@ if (_config.method1()) {{
 >>>>>>> REPLACE
 ```
 
-Please note that the *SEARCH/REPLACE* edit REQUIRES PROPER INDENTATION. 
 Wrap the *SEARCH/REPLACE* edit in blocks ```java...```.
 """
 
@@ -163,7 +161,7 @@ if __name__ == '__main__':
         _results = []
         _locate_lines = set(_locate_line_json['responses'])
         for _locate_line in _locate_lines:
-            user_prompt = LocateLinePrompt.format(
+            user_prompt = RepairPrompt.format(
                 skeleton_of_classes=_skeleton_of_classes,
                 failed_tests=_failed_tests,
                 possible_bug_locations=_locate_line,
