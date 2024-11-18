@@ -91,10 +91,10 @@ if __name__ == '__main__':
         _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method_baseline"
     else:
         _buggy_method_path = f"{D4J_JSON_PATH}/buggy_method"
-    if _add_issue:
-        _buggy_method_path += "_issue"
-    if _add_stack:
-        _buggy_method_path += "_stack"
+        if _add_issue:
+            _buggy_method_path += "_issue"
+        if _add_stack:
+            _buggy_method_path += "_stack"
 
     if not os.path.exists(_repair_path):
         os.makedirs(_repair_path)
