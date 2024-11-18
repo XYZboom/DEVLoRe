@@ -108,3 +108,9 @@ def ori_d4j_pids_bids():
     for _pid in __ori_d4j:
         for _bid in __ori_d4j[_pid]:
             yield _pid, str(_bid)
+
+
+if __name__ == '__main__':
+    import d4j_filters
+    assert d4j_filters.is_single_function_bug('Chart', 1)
+    assert len(list(ori_d4j_pids_bids())) == 835

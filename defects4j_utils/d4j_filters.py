@@ -633,5 +633,5 @@ def can_fix(baseline_name, pid, bid) -> bool:
 
 
 if __name__ == '__main__':
-    print(is_single_function_bug('Chart', 1))
-    print(is_single_function_bug('Chart', 14))
+    assert is_single_function_bug('Chart', 1)
+    assert not is_single_function_bug('Chart', 14)
