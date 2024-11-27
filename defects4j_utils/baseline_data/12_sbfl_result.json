@@ -128,7 +128,7 @@
         ],
         "amount": 29
     },
-    "tare": {
+    "Tare": {
         "bugs": [
             "Closure_63",
             "Chart_8",

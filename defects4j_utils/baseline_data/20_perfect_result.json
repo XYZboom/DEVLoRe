@@ -139,7 +139,7 @@
         ],
         "amount": 45
     },
-    "tare": {
+    "Tare": {
         "bugs": [
             "Jsoup_24",
             "Codec_17",
@@ -267,7 +267,7 @@
         ],
         "amount": 36
     },
-    "fitrepair": {
+    "FitRepair": {
         "bugs": [
             "JacksonDatabind_1",
             "Codec_17",

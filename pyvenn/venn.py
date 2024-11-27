@@ -1,5 +1,6 @@
 # coding: utf-8
 from itertools import chain
+
 try:
     # since python 3.10
     from collections.abc import Iterable
@@ -24,6 +25,7 @@ default_colors = [
     for i in default_colors
 ]
 
+
 def draw_ellipse(fig, ax, x, y, w, h, a, fillcolor):
     e = patches.Ellipse(
         xy=(x, y),
@@ -32,6 +34,7 @@ def draw_ellipse(fig, ax, x, y, w, h, a, fillcolor):
         angle=a,
         color=fillcolor)
     ax.add_patch(e)
+
 
 def draw_triangle(fig, ax, x1, y1, x2, y2, x3, y3, fillcolor):
     xy = [
@@ -45,6 +48,7 @@ def draw_triangle(fig, ax, x1, y1, x2, y2, x3, y3, fillcolor):
         color=fillcolor)
     ax.add_patch(polygon)
 
+
 def draw_text(fig, ax, x, y, text, color=[0, 0, 0, 1], fontsize=14, ha="center", va="center"):
     ax.text(
         x, y, text,
@@ -52,6 +56,7 @@ def draw_text(fig, ax, x, y, text, color=[0, 0, 0, 1], fontsize=14, ha="center",
         verticalalignment=va,
         fontsize=fontsize,
         color="black")
+
 
 def draw_annotate(fig, ax, x, y, textx, texty, text, color=[0, 0, 0, 1], arrowcolor=[0, 0, 0, 0.3]):
     plt.annotate(
@@ -66,6 +71,7 @@ def draw_annotate(fig, ax, x, y, textx, texty, text, color=[0, 0, 0, 1], arrowco
         horizontalalignment='center',
         verticalalignment='center'
     )
+
 
 def get_labels(data, fill=["number"]):
     """
@@ -96,15 +102,15 @@ def get_labels(data, fill=["number"]):
     N = len(data)
 
     sets_data = [set(data[i]) for i in range(N)]  # sets for separate groups
-    s_all = set(chain(*data))                     # union of all sets
+    s_all = set(chain(*data))  # union of all sets
 
     # bin(3) --> '0b11', so bin(3).split('0b')[-1] will remove "0b"
     set_collections = {}
-    for n in range(1, 2**N):
+    for n in range(1, 2 ** N):
         key = bin(n).split('0b')[-1].zfill(N)
         value = s_all
-        sets_for_intersection = [sets_data[i] for i in range(N) if  key[i] == '1']
-        sets_for_difference = [sets_data[i] for i in range(N) if  key[i] == '0']
+        sets_for_intersection = [sets_data[i] for i in range(N) if key[i] == '1']
+        sets_for_difference = [sets_data[i] for i in range(N) if key[i] == '0']
         for s in sets_for_intersection:
             value = value & s
         for s in sets_for_difference:
@@ -124,6 +130,7 @@ def get_labels(data, fill=["number"]):
             labels[k] += "(%.1f%%)" % (100.0 * len(set_collections[k]) / data_size)
 
     return labels
+
 
 def venn2(labels, names=['A', 'B'], **options):
     """
@@ -168,6 +175,7 @@ def venn2(labels, names=['A', 'B'], **options):
     leg.get_frame().set_alpha(0.5)
 
     return fig, ax
+
 
 def venn3(labels, names=['A', 'B', 'C'], **options):
     """
@@ -219,6 +227,7 @@ def venn3(labels, names=['A', 'B', 'C'], **options):
 
     return fig, ax
 
+
 def venn4(labels, names=['A', 'B', 'C', 'D'], **options):
     """
     plots a 4-set Venn diagram
@@ -241,6 +250,7 @@ def venn4(labels, names=['A', 'B', 'C', 'D'], **options):
     figsize = options.get('figsize', (12, 12))
     dpi = options.get('dpi', 96)
     fontsize = options.get('fontsize', 14)
+    legend_loc = options.get('legend_loc', 'lower right')
 
     fig = plt.figure(0, figsize=figsize, dpi=dpi)
     ax = fig.add_subplot(111, aspect='equal')
@@ -274,12 +284,13 @@ def venn4(labels, names=['A', 'B', 'C', 'D'], **options):
     draw_text(fig, ax, 0.18, 0.83, names[1], colors[1], fontsize=fontsize, ha="right", va="bottom")
     draw_text(fig, ax, 0.82, 0.83, names[2], colors[2], fontsize=fontsize, ha="left", va="bottom")
     draw_text(fig, ax, 0.87, 0.18, names[3], colors[3], fontsize=fontsize, ha="left", va="top")
-    leg = ax.legend(names, loc='best',
-                    # bbox_to_anchor=(1.0, 0.5),
-                    fancybox=True)
+    leg = fig.legend(names, loc=legend_loc, fontsize=fontsize,
+                     # bbox_to_anchor=(1.0, 0.5),
+                     fancybox=True)
     leg.get_frame().set_alpha(0.5)
 
     return fig, ax
+
 
 def venn5(labels, names=['A', 'B', 'C', 'D', 'E'], **options):
     """
@@ -303,6 +314,7 @@ def venn5(labels, names=['A', 'B', 'C', 'D', 'E'], **options):
     figsize = options.get('figsize', (13, 13))
     dpi = options.get('dpi', 96)
     fontsize = options.get('fontsize', 14)
+    legend_loc = options.get('legend_loc', 'lower right')
 
     fig = plt.figure(0, figsize=figsize, dpi=dpi)
     ax = fig.add_subplot(111, aspect='equal')
@@ -354,12 +366,13 @@ def venn5(labels, names=['A', 'B', 'C', 'D', 'E'], **options):
     draw_text(fig, ax, 0.97, 0.74, names[2], colors[2], fontsize=fontsize, ha="left")
     draw_text(fig, ax, 0.88, 0.05, names[3], colors[3], fontsize=fontsize, ha="left")
     draw_text(fig, ax, 0.12, 0.05, names[4], colors[4], fontsize=fontsize, ha="right")
-    leg = ax.legend(names, loc='best',
-                    # bbox_to_anchor=(0.98, 0.5),
-                    fancybox=True)
+    leg = fig.legend(names, loc=legend_loc, fontsize=fontsize,
+                     # bbox_to_anchor=(1.0, 0.5),
+                     fancybox=True)
     leg.get_frame().set_alpha(0.5)
 
     return fig, ax
+
 
 def venn6(labels, names=['A', 'B', 'C', 'D', 'E', 'F'], **options):
     """
@@ -473,4 +486,3 @@ def venn6(labels, names=['A', 'B', 'C', 'D', 'E', 'F'], **options):
     leg.get_frame().set_alpha(0.5)
 
     return fig, ax
-

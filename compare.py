@@ -23,135 +23,68 @@ if __name__ == '__main__':
     import os
     import defects4j_utils
     from collections import defaultdict
-    from pyvenn.venn import venn6
+    from pyvenn.venn import venn5
     from pyvenn.venn import get_labels
 
     _ = load_dotenv(find_dotenv())
     OUTPUT_PATH = os.environ.get("OUTPUT_PATH")
 
-    _debug_eval_path = f"{OUTPUT_PATH}/EvaluateDebug"
-    _issue_eval_path = f"{OUTPUT_PATH}/EvaluateIssue"
-    _issue_debug_eval_path = f"{OUTPUT_PATH}/EvaluateIssueDebug"
-    _eval_path = f"{OUTPUT_PATH}/Evaluate"
-    _baseline_debug_eval_path = f"{OUTPUT_PATH}/EvaluateBaselineDebug"
-    _baseline_eval_path = f"{OUTPUT_PATH}/EvaluateBaseline"
-    _issue_more_count = 0
-    _debug_more_count = 0
-    _issue_debug_more_count = 0
-    _normal_more_count = 0
-    _issue_more = set()
-    _debug_more = set()
-    _issue_debug_more = set()
-    _normal_more = set()
-    _final = set()
-    _exist_final = set()
-
-    venn_data = [set(), set(), set(), set(), set(), set()]
-    venn_single_func = [set(), set(), set(), set(a), set(), set()]
-    venn_multi_func = [set(), set(), set(), set(), set(), set()]
-
-    for pid, bid in defects4j_utils.d4j_pids_bids():
-        _version_str = f"{pid}_{bid}b"
-        _debug_eval_file = f"{_debug_eval_path}/{_version_str}.json"
-        _issue_eval_file = f"{_issue_eval_path}/{_version_str}.json"
-        _issue_debug_eval_file = f"{_issue_debug_eval_path}/{_version_str}.json"
-        _eval_file = f"{_eval_path}/{_version_str}.json"
-        _baseline_debug_eval_file = f"{_baseline_debug_eval_path}/{_version_str}.json"
-        _baseline_eval_file = f"{_baseline_eval_path}/{_version_str}.json"
-        _all_eval = [_eval_file, _issue_eval_file, _debug_eval_file,
-                     _issue_debug_eval_file, _baseline_eval_file, _baseline_debug_eval_file]
-
-
-        def add_venn(_file, index):
-            if available(_file):
-                venn_data[index].add(_version_str)
-                if defects4j_utils.is_single_function_bug(pid, bid):
-                    venn_single_func[index].add(_version_str)
+    _eval = f"{OUTPUT_PATH}/Evaluate"
+    _evalI = f"{OUTPUT_PATH}/EvaluateIssue"
+    _evalD = f"{OUTPUT_PATH}/EvaluateDebug"
+    _evalS = f"{OUTPUT_PATH}/EvaluateStack"
+    _evalID = f"{OUTPUT_PATH}/EvaluateIssueDebug"
+    _evalIS = f"{OUTPUT_PATH}/EvaluateIssueStack"
+    _evalSD = f"{OUTPUT_PATH}/EvaluateStackDebug"
+    _evalISD = f"{OUTPUT_PATH}/EvaluateIssueStackDebug"
+    _paths = [_eval, _evalI, _evalD, _evalS, _evalID, _evalIS, _evalSD, _evalISD]
+    _names = ["No extra", "Issue", "Debug", "Error", "Issue+Debug", "Issue+Error", "Error+Debug", "Issue+Error+Debug"]
+    _multi_count = 0
+    _single_count = 0
+    _all_count = 0
+    # range(6) here is {single, multi, all} x {available, all},
+    _eval_map: dict[str, list[set]] = {i: [(lambda: set())() for _ in range(6)] for i in _names}
+    for pid, bid in defects4j_utils.ori_d4j_pids_bids():
+        is_single = defects4j_utils.is_single_function_bug(pid, bid)
+        _all_count += 1
+        if is_single:
+            _single_count += 1
+        else:
+            _multi_count += 1
+        for _path, _name in zip(_paths, _names):
+            single, single_all, multi, multi_all, _all, _all_all = _eval_map[_name]
+            _version_str = f"{pid}_{bid}b"
+            _eval_file = f"{_path}/{_version_str}.json"
+            if not os.path.exists(_eval_file):
+                continue
+            _all_all.add(_version_str)
+            if is_single:
+                single_all.add(_version_str)
+            else:
+                multi_all.add(_version_str)
+            if os.path.getsize(_eval_file) != 0:
+                _all.add(_version_str)
+                if is_single:
+                    single.add(_version_str)
                 else:
-                    venn_multi_func[index].add(_version_str)
+                    multi.add(_version_str)
 
+    union = [set.union(*[_eval_map[k][0] for k in _eval_map]),
+             set.union(*[_eval_map[k][2] for k in _eval_map]),
+             set.union(*[_eval_map[k][4] for k in _eval_map])]
 
-        for i, _file, in enumerate(_all_eval):
-            add_venn(_file, i)
-        if available(_baseline_debug_eval_file):
-            _final.add((pid, bid))
-        if exists(_baseline_debug_eval_file):
-            _exist_final.add((pid, bid))
-        # for _f in [_debug_eval_file, _issue_eval_file,_issue_debug_eval_file, _eval_file]:
-        #     filter_test_edit(_f)
-        # continue
-        if available(_issue_eval_file) and not available(_eval_file):
-            _issue_more_count += 1
-            _issue_more.add(_version_str)
-        if available(_debug_eval_file) and not available(_eval_file):
-            _debug_more_count += 1
-            _debug_more.add(_version_str)
-        if available(_issue_debug_eval_file) and not available(_eval_file):
-            _issue_debug_more_count += 1
-            _issue_debug_more.add(_version_str)
-        if (available(_eval_file)
-                and not available(_debug_eval_file)
-                and not available(_issue_debug_eval_file)
-                and not available(_issue_eval_file)):
-            _normal_more_count += 1
-            _normal_more.add(_version_str)
-
-    fig, ax = venn6(get_labels(venn_data),
-                    names=['No extra', 'Issue', 'Debug', 'Issue+Debug', 'Perfect', 'Perfect+Debug'])
+    for _name in _names:
+        single, single_all, multi, multi_all, _all, _all_all = _eval_map[_name]
+        print(f"{_name} & {len(single)}/{len(single_all)}={len(single) / len(single_all) * 100:.1f}\\% "
+              f"& {len(multi)}/{len(multi_all)}={len(multi) / len(multi_all) * 100:.1f}\\% "
+              f"& {len(_all)}/{len(_all_all)}={len(_all) / len(_all_all) * 100:.1f}\\% \\\\")
+    print(f"Union & {len(union[0])}/{_single_count}={len(union[0]) / _single_count * 100:.1f}\\% "
+          f"& {len(union[1])}/{_multi_count}={len(union[1]) / _multi_count * 100:.1f}\\% "
+          f"& {len(union[2])}/{_all_count}={len(union[2]) / _all_count * 100:.1f}\\% \\\\")
+    _labels = get_labels([_eval_map[k][4] for k in ["Issue", "Debug", "Error", "Issue+Debug", "Issue+Error"]])
+    print(_labels)
+    venn5(_labels,
+          ["Issue", "Debug", "Error", "Issue+Debug", "Issue+Error"],
+          dpi=96, fontsize=24, figsize=(18, 12), legend_loc='right')
+    plt.savefig(f"{OUTPUT_PATH}/Overall_overlap.pdf")
     plt.show()
-    fig1, ax1 = venn6(get_labels(venn_single_func),
-                      names=['No extra', 'Issue', 'Debug', 'Issue+Debug', 'Perfect', 'Perfect+Debug'])
-    plt.show()
-    fig2, ax2 = venn6(get_labels(venn_multi_func),
-                      names=['No extra', 'Issue', 'Debug', 'Issue+Debug', 'Perfect', 'Perfect+Debug'])
-    plt.show()
-
-    print("issue more:")
-    print(_issue_more_count)
-    print(_issue_more)
-    print("debug more:")
-    print(_debug_more_count)
-    print(_debug_more)
-    print("issue and debug more:")
-    print(_issue_debug_more_count)
-    print(_issue_debug_more)
-    print("issue-debug more than issue:")
-    _issue_debug_more_issue = _issue_debug_more.difference(_issue_more)
-    print(len(_issue_debug_more_issue))
-    print(_issue_debug_more_issue)
-    print("issue-debug more than debug:")
-    _issue_debug_more_debug = _issue_debug_more.difference(_debug_more)
-    print(len(_issue_debug_more_debug))
-    print(_issue_debug_more_debug)
-    print("normal more than all:")
-    print(_normal_more_count)
-    print(_normal_more)
-
-    _single_function_count = 0
-    _exist_single_function_count = 0
-    _fixed_single_function_count = 0
-    _fixed_non_single_count = 0
-    _more_giant = set()
-    _giant_more = set()
-    for pid, bid in defects4j_utils.d4j_pids_bids():
-        if defects4j_utils.is_single_function_bug(pid, bid):
-            _single_function_count += 1
-            if (pid, bid) in _exist_final:
-                _exist_single_function_count += 1
-            if (pid, bid) in _final:
-                _fixed_single_function_count += 1
-                if not defects4j_utils.can_giant_repair_fix(pid, bid):
-                    _more_giant.add((pid, bid))
-            if defects4j_utils.can_giant_repair_fix(pid, bid) and (pid, bid) not in _giant_more:
-                _giant_more.add((pid, bid))
-        elif (pid, bid) in _final:
-            _fixed_non_single_count += 1
-    print(f"single-function all: {_fixed_single_function_count}/{_single_function_count} = "
-          f"{_fixed_single_function_count / _single_function_count}")
-    print(f"single-function exist: {_fixed_single_function_count}/{_exist_single_function_count} = "
-          f"{_fixed_single_function_count / _exist_single_function_count}")
-    print(f"non-single: {_fixed_non_single_count}")
-    print(f"single-function more giant: {len(_more_giant)}")
-    print(_more_giant)
-    print(f"giant more: {len(_giant_more)}")
-    print(_giant_more)

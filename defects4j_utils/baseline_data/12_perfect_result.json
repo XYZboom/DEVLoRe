@@ -341,7 +341,7 @@
         ],
         "amount": 82
     },
-    "tare": {
+    "Tare": {
         "bugs": [
             "Closure_5",
             "Math_33",
@@ -717,7 +717,7 @@
         ],
         "amount": 34
     },
-    "fitrepair": {
+    "FitRepair": {
         "bugs": [
             "Closure_101",
             "Lang_11",
@@ -1060,7 +1060,7 @@
         ],
         "amount": 43
     },
-    "repilot": {
+    "Repilot": {
         "bugs": [
             "Closure_97",
             "Math_34",

@@ -79,6 +79,11 @@ def do_patch(pid, bid, _evaluate_path, _patch_dir):
     _copy_dir = tempfile.TemporaryDirectory()
     with open(_evaluate_path, "r") as _f:
         _eval_result = json.load(_f)
+    if not _eval_result:
+        return
+    if isinstance(_eval_result[0], list):
+        # Choose first patch
+        _eval_result = _eval_result[0]
     with tempfile.TemporaryDirectory() as temp_dir:
         print(f"checkout {_version_str}")
         defects4j_utils.checkout(pid, bid, temp_dir, _print_stderr=False)
@@ -108,7 +113,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--patch-only", help="output git patch only", default=False)
     parser.add_argument("--patch-valid", help="patch only result that passed the test", default=True)
-    parser.add_argument("--patch-dir", help="output git patch directory", default=False)
     parser.add_argument("--add-debug-info", help="add debug info", default=False)
     parser.add_argument("--add-issue-info", help="add issue info", default=False)
     parser.add_argument("--use-baseline-method", help="use baseline method", default=False)
@@ -123,20 +127,24 @@ if __name__ == '__main__':
 
     _repair_path = f"{OUTPUT_PATH}/Repair"
     _evaluate_path = f"{OUTPUT_PATH}/Evaluate"
+    _patch_path = f"{OUTPUT_PATH}/Patch"
     if _baseline_method:
         _repair_path += "Baseline"
         _evaluate_path += "Baseline"
+        _patch_path += "Baseline"
     if _add_issue:
         _repair_path += "Issue"
         _evaluate_path += "Issue"
+        _patch_path += "Issue"
     if _add_stack:
         _repair_path += "Stack"
         _evaluate_path += "Stack"
+        _patch_path += "Stack"
     if _add_debug:
         _repair_path += "Debug"
         _evaluate_path += "Debug"
+        _patch_path += "Debug"
 
-    _patch_path = args.patch_dir
     _patch_valid = False if args.patch_valid == 'False' else True
     if _patch_valid and not os.path.exists(_patch_path):
         os.makedirs(_patch_path)
@@ -182,7 +190,7 @@ if __name__ == '__main__':
         if not _repairs:
             print("no available repairs")
             return
-        _success_repair = None
+        _success_repairs = []
         with tempfile.TemporaryDirectory() as temp_dir:
             print(f"checkout {_version_str}")
             defects4j_utils.checkout(pid, bid, temp_dir)
@@ -215,21 +223,21 @@ if __name__ == '__main__':
                 except eventlet.Timeout:
                     print("execution time out")
                     # continue
-                    break
+                    continue
                 if _run_test_result == 'success':
                     try:
                         with eventlet.Timeout(1200):
                             _final_result = project.run_test(relevant=False)
                             if _final_result == "success":
-                                _success_repair = _replace_result
-                                break
+                                _success_repairs.append(_replace_result)
+                                continue
                     except eventlet.Timeout:
                         print("execution time out")
-                        break
-        if _success_repair:
+                        continue
+        if _success_repairs:
             print(f"success {_version_str}")
             with open(_my_evaluate_path, "w") as _f:
-                json.dump(_success_repair, _f)
+                json.dump(_success_repairs, _f)
         else:
             print(f"fail {_version_str}")
             open(_my_evaluate_path, "w").close()

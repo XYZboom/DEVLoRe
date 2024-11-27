@@ -63,7 +63,7 @@ def method_matches(tool_method: list[str], baseline_method: list[str], topn: int
 
 
 if __name__ == '__main__':
-    from pyvenn.venn import venn4, venn2, venn3, get_labels
+    from pyvenn.venn import venn4, venn2, venn3, get_labels, venn5
     from dotenv import load_dotenv, find_dotenv
     import os
     import re
@@ -76,6 +76,7 @@ if __name__ == '__main__':
 
     _ = load_dotenv(find_dotenv())
     OUTPUT_PATH = os.environ.get("OUTPUT_PATH")
+    OUTPUT_PATH = "/home/xyzboom/d4joutV3"
     _patch_method_path = f"{OUTPUT_PATH}/PatchMethodLocations"
     all_ids = list(defects4j_utils.d4j_pids_bids())
     d4j_single = list((pid, bid) for pid, bid in defects4j_utils.ori_d4j_pids_bids()
@@ -142,41 +143,100 @@ if __name__ == '__main__':
                 traceback.print_exc()
 
     venn4(get_labels(_single_available_set), ['Issue+Stack', 'Issue', 'Stack', 'No extra'])
-    # plt.show()
+    plt.show()
     venn2(get_labels([_single_available_set[1], _single_available_set[2]]), ['Issue', 'Stack'])
-    # plt.show()
-    venn4(get_labels(_multi_available_set), ['Issue+Stack', 'Issue', 'Stack', 'No extra'])
-    # plt.show()
+    plt.show()
+    venn4(get_labels(_all_available_set), ['No extra', 'Issue', 'Stack', 'Issue+Stack'],
+          dpi=128, fontsize=24, figsize=(16, 12))
+    plt.savefig(f"{OUTPUT_PATH}/method_all_overlap.pdf")
+    plt.show()
     venn2(get_labels([_multi_available_set[1], _multi_available_set[2]]), ['Issue', 'Stack'])
-    # plt.show()
+    plt.show()
     for _locate_method_path, _mavailable, _mtop3, _mtop5, _savailable, _stop3, _stop5, _all_available, _atop3, _atop5 \
             in (zip(_paths, _multi_available_set, _multi_top3, _multi_top5,
                     _single_available_set, _single_top3, _single_top5,
                     _all_available_set, _all_top3, _all_top5)):
-        print(f"{_locate_method_path} & Top1 & {len(_savailable) / len(d4j_single) * 100:.2f}\\% & "
-              f"{len(_mavailable) / len(d4j_multi) * 100:.2f}\\% & "
-              f"{len(_all_available) / 835 * 100:.2f}\\% \\\\ \n"
+        print(f"{_locate_method_path} & Top1 & {len(_savailable) / len(d4j_single) * 100:.1f}\\% & "
+              f"{len(_mavailable) / len(d4j_multi) * 100:.1f}\\% & "
+              f"{len(_all_available) / 835 * 100:.1f}\\% \\\\ \n"
 
-              f"\t\t~& Top3 & {len(_stop3) / len(d4j_single) * 100:.2f}\\% & "
-              f"{len(_mtop3) / len(d4j_multi) * 100:.2f}\\% & "
-              f"{len(_atop3) / 835 * 100:.2f}\\% \\\\ \n"
+              f"\t\t~& Top3 & {len(_stop3) / len(d4j_single) * 100:.1f}\\% & "
+              f"{len(_mtop3) / len(d4j_multi) * 100:.1f}\\% & "
+              f"{len(_atop3) / 835 * 100:.1f}\\% \\\\ \n"
 
-              f"\t\t~& Top5 & {len(_stop5) / len(d4j_single) * 100:.2f}\\% & "
-              f"{len(_mtop5) / len(d4j_multi) * 100:.2f}\\% & "
-              f"{len(_atop5) / 835 * 100:.2f}\\% \\\\")
-    print(f"Total & Top1 & {len(set.union(*_single_available_set)) / len(d4j_single) * 100:.2f}\\% & "
-          f"{len(set.union(*_multi_available_set)) / len(d4j_multi) * 100:.2f}\\% & "
-          f"{len(set.union(*_all_available_set)) / 835 * 100:.2f}\\% \\\\ \n"
+              f"\t\t~& Top5 & {len(_stop5) / len(d4j_single) * 100:.1f}\\% & "
+              f"{len(_mtop5) / len(d4j_multi) * 100:.1f}\\% & "
+              f"{len(_atop5) / 835 * 100:.1f}\\% \\\\")
+    print(f"Total & Top1 & {len(set.union(*_single_available_set)) / len(d4j_single) * 100:.1f}\\% & "
+          f"{len(set.union(*_multi_available_set)) / len(d4j_multi) * 100:.1f}\\% & "
+          f"{len(set.union(*_all_available_set)) / 835 * 100:.1f}\\% \\\\ \n"
 
-          f"\t\t~& Top3 & {len(set.union(*_single_top3)) / len(d4j_single) * 100:.2f}\\% & "
-          f"{len(set.union(*_multi_top3)) / len(d4j_multi) * 100:.2f}\\% & "
-          f"{len(set.union(*_all_top3)) / 835 * 100:.2f}\\% \\\\ \n"
+          f"\t\t~& Top3 & {len(set.union(*_single_top3)) / len(d4j_single) * 100:.1f}\\% & "
+          f"{len(set.union(*_multi_top3)) / len(d4j_multi) * 100:.1f}\\% & "
+          f"{len(set.union(*_all_top3)) / 835 * 100:.1f}\\% \\\\ \n"
 
-          f"\t\t~& Top5 & {len(set.union(*_single_top5)) / len(d4j_single) * 100:.2f}\\% & "
-          f"{len(set.union(*_multi_top5)) / len(d4j_multi) * 100:.2f}\\% & "
-          f"{len(set.union(*_all_top5)) / 835 * 100:.2f}\\% \\\\")
+          f"\t\t~& Top5 & {len(set.union(*_single_top5)) / len(d4j_single) * 100:.1f}\\% & "
+          f"{len(set.union(*_multi_top5)) / len(d4j_multi) * 100:.1f}\\% & "
+          f"{len(set.union(*_all_top5)) / 835 * 100:.1f}\\% \\\\")
     # </editor-fold>
 
+
+    # <editor-fold desc="old method">
+    _single_all_set = [set(), set(), set(), set()]
+    _single_available_set = [set(), set(), set(), set()]
+    _multi_all_set = [set(), set(), set(), set()]
+    _multi_available_set = [set(), set(), set(), set()]
+    _all_set = [set(), set(), set(), set()]
+    _all_available_set = [set(), set(), set(), set()]
+    for _locate_method_path, _mall, _mavailable, _sall, _savailable, _all, _all_available in (
+            zip(_paths, _multi_all_set, _multi_available_set, _single_all_set, _single_available_set,
+                _all_set, _all_available_set)):
+        for pid, bid in tqdm.tqdm(all_ids, desc=f"Evaluate Method Level", unit="step"):
+            try:
+                # if not defects4j_utils.is_ori_d4j(pid, bid):
+                #     continue
+                _version_str = f"{pid}_{bid}b"
+                _patch_method_file = f"{_patch_method_path}/{_version_str}.txt"
+                _locate_method_file = f"{_locate_method_path}/{_version_str}.json"
+                if (not os.path.exists(_locate_method_file)
+                        or not os.path.exists(_patch_method_file)):
+                    continue
+                if os.path.getsize(_patch_method_file) == 0:
+                    continue
+                _all.add((pid, bid))
+                if defects4j_utils.is_single_function_bug(pid, bid):
+                    _sall.add((pid, bid))
+                else:
+                    _mall.add((pid, bid))
+                with open(_patch_method_file, "r") as _f:
+                    _ground = set(_f.read().splitlines())
+                with open(_locate_method_file, "r") as _f:
+                    _raw = json.load(_f)
+                    _gpt = set(handle_raw_response(_raw['response']).split(","))
+                if _ground.intersection(_gpt):
+                    _all_available.add((pid, bid))
+                    if defects4j_utils.is_single_function_bug(pid, bid):
+                        _savailable.add((pid, bid))
+                    else:
+                        _mavailable.add((pid, bid))
+            except Exception as e:
+                print(pid, bid, _locate_method_path)
+                traceback.print_exc()
+
+    venn4(get_labels(_all_available_set), ['No extra', 'Issue', 'Stack', 'Issue+Stack'],
+          dpi=128, fontsize=24, figsize=(16, 12))
+    plt.savefig(f"{OUTPUT_PATH}/method_all_overlap_intersect_any.pdf")
+    plt.show()
+
+    for _locate_method_path, _mall, _mavailable, _sall, _savailable, _all, _all_available in (
+            zip(_paths, _multi_all_set, _multi_available_set, _single_all_set, _single_available_set,
+                _all_set, _all_available_set)):
+        print(_locate_method_path, len(_mall), len(_mavailable), len(_mavailable) / len(_mall),
+              len(_sall), len(_savailable), len(_savailable) / len(_sall),
+              len(_all), len(_all_available), len(_all_available) / len(_all))
+
+    # </editor-fold>
+    # <editor-fold desc="line">
     _baseline_buggy_line_path = f"{OUTPUT_PATH}/FixEditLine"
     _line_IS = f"{OUTPUT_PATH}/LocateLineBaselineIssueStack"
     _line_I = f"{OUTPUT_PATH}/LocateLineBaselineIssue"
@@ -245,26 +305,34 @@ if __name__ == '__main__':
     for _path, lSAllE, lMAllE, lAllE, lSAllE3, lMAllE3, lAllE3, lSAllE5, lMAllE5, lAllE5, in (
             zip(_paths, l_single_exact, l_multi_exact, l_exact,
                 l_single_loose3, l_multi_loose3, l_loose3, l_single_loose5, l_multi_loose5, l_loose5)):
-        print(f"{_path} & exact & {len(lSAllE) / len(d4j_single) * 100:.2f}\\% & "
-              f"{len(lMAllE) / len(d4j_multi) * 100:.2f}\\% & "
-              f"{len(lAllE) / 835 * 100:.2f}\\% \\\\ \n"
+        print(f"\\multirow{{3}}{{0.28\\textwidth}}{{{_path}}} & Exact & {len(lSAllE) / len(d4j_single) * 100:.1f}\\% & "
+              f"{len(lMAllE) / len(d4j_multi) * 100:.1f}\\% & "
+              f"{len(lAllE) / 835 * 100:.1f}\\% \\\\ \n"
 
-              f"\t\t~& loose3 & {len(lSAllE3) / len(d4j_single) * 100:.2f}\\% & "
-              f"{len(lMAllE3) / len(d4j_multi) * 100:.2f}\\% & "
-              f"{len(lAllE3) / 835 * 100:.2f}\\% \\\\ \n"
+              f"\t\t~& Range-3 & {len(lSAllE3) / len(d4j_single) * 100:.1f}\\% & "
+              f"{len(lMAllE3) / len(d4j_multi) * 100:.1f}\\% & "
+              f"{len(lAllE3) / 835 * 100:.1f}\\% \\\\ \n"
 
-              f"\t\t~& loose5 & {len(lSAllE5) / len(d4j_single) * 100:.2f}\\% & "
-              f"{len(lMAllE5) / len(d4j_multi) * 100:.2f}\\% & "
-              f"{len(lAllE5) / 835 * 100:.2f}\\% \\\\")
+              f"\t\t~& Range-5 & {len(lSAllE5) / len(d4j_single) * 100:.1f}\\% & "
+              f"{len(lMAllE5) / len(d4j_multi) * 100:.1f}\\% & "
+              f"{len(lAllE5) / 835 * 100:.1f}\\% \\\\")
     print(
-        f"total & exact & {len(set.union(*l_single_exact)) / len(d4j_single) * 100:.2f}\\% & "
-        f"{len(set.union(*l_multi_exact)) / len(d4j_multi) * 100:.2f}\\% & "
-        f"{len(set.union(*l_exact)) / 835 * 100:.2f}\\% \\\\ \n"
+        f"\\multirow{{3}}{{0.28\\textwidth}}{{Union}}"
+        f" & Exact & {len(set.union(*l_single_exact)) / len(d4j_single) * 100:.1f}\\% & "
+        f"{len(set.union(*l_multi_exact)) / len(d4j_multi) * 100:.1f}\\% & "
+        f"{len(set.union(*l_exact)) / 835 * 100:.1f}\\% \\\\ \n"
 
-        f"\t\t~& loose3 & {len(set.union(*l_single_loose3)) / len(d4j_single) * 100:.2f}\\% & "
-        f"{len(set.union(*l_multi_loose3)) / len(d4j_multi) * 100:.2f}\\% & "
-        f"{len(set.union(*l_loose3)) / 835 * 100:.2f}\\% \\\\ \n"
+        f"\t\t~& Range-3 & {len(set.union(*l_single_loose3)) / len(d4j_single) * 100:.1f}\\% & "
+        f"{len(set.union(*l_multi_loose3)) / len(d4j_multi) * 100:.1f}\\% & "
+        f"{len(set.union(*l_loose3)) / 835 * 100:.1f}\\% \\\\ \n"
 
-        f"\t\t~& loose5 & {len(set.union(*l_single_loose5)) / len(d4j_single) * 100:.2f}\\% & "
-        f"{len(set.union(*l_multi_loose5)) / len(d4j_multi) * 100:.2f}\\% & "
-        f"{len(set.union(*l_loose5)) / 835 * 100:.2f}\\% \\\\ ")
+        f"\t\t~& Range-5 & {len(set.union(*l_single_loose5)) / len(d4j_single) * 100:.1f}\\% & "
+        f"{len(set.union(*l_multi_loose5)) / len(d4j_multi) * 100:.1f}\\% & "
+        f"{len(set.union(*l_loose5)) / 835 * 100:.1f}\\% \\\\ ")
+
+    venn5(get_labels([l_exact[1], l_exact[2], l_exact[3], l_exact[5], l_exact[6], ]),
+          ["Issue", "Stack", "Debug", "Issue+Debug", "Issue+Stack"],
+          dpi=128, fontsize=24, figsize=(18, 12), legend_loc='right')
+    plt.savefig(f"{OUTPUT_PATH}/line_exact_overlap.pdf")
+    plt.show()
+    # </editor-fold>

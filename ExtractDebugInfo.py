@@ -42,6 +42,9 @@ if __name__ == '__main__':
     elif _baseline_method:
         _debug_info_path = f"{OUTPUT_PATH}/DebugInfoBaseline"
         _locate_path = f"{OUTPUT_PATH}/PatchMethodLocations"
+    elif _add_stack:
+        _debug_info_path = f"{OUTPUT_PATH}/DebugInfoStack"
+        _locate_path = f"{OUTPUT_PATH}/LocateMethodStack"
     else:
         _debug_info_path = f"{OUTPUT_PATH}/DebugInfo"
         _locate_path = f"{OUTPUT_PATH}/LocateMethod"
