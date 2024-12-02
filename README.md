@@ -79,7 +79,11 @@ python LocateMethod.py --add-issue-info=True --add-stack-info=True
 # --add-stack-info=True add stack info in prompt
 ```
 
-Issue information should put in {OUTPUT_PATH}/issue_content
+Issue information should put in {OUTPUT_PATH}/issue_content.
+You can find issue content extract by us in our data zip file.
+You can also extract issue content by your own, for example, 
+issue url of project "Lang" in Defects4J is located at 
+[here](https://github.com/rjust/defects4j/blob/master/framework/projects/Lang/active-bugs.csv).
 
 - Extract buggy method content
 
