@@ -2,6 +2,7 @@
 
 ![Framework](./docs/imgs/framework.png)
 
+Our experimental data is available at [release page](https://github.com/XYZboom/BugFixLLM/releases/download/v0.0.1-pre/DEVLoRe-Data.zip)
 ## How to use
 
 - [x] **Step 1. Clone project**
