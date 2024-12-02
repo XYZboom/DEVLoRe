@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Set, Dict
+from typing import Set, Dict, List
 
 from matplotlib import pyplot as plt
 
@@ -55,7 +55,7 @@ def line_matches(tool_line: Dict[str, Set[int]], baseline_line: Dict[str, Set[in
     return True
 
 
-def method_matches(tool_method: list[str], baseline_method: list[str], topn: int = 1) -> bool:
+def method_matches(tool_method: List[str], baseline_method: List[str], topn: int = 1) -> bool:
     for i in tool_method[0:topn]:
         if i in baseline_method:
             return True
@@ -76,9 +76,8 @@ if __name__ == '__main__':
 
     _ = load_dotenv(find_dotenv())
     OUTPUT_PATH = os.environ.get("OUTPUT_PATH")
-    OUTPUT_PATH = "/home/xyzboom/d4joutV3"
     _patch_method_path = f"{OUTPUT_PATH}/PatchMethodLocations"
-    all_ids = list(defects4j_utils.d4j_pids_bids())
+    all_ids = list(defects4j_utils.ori_d4j_pids_bids())
     d4j_single = list((pid, bid) for pid, bid in defects4j_utils.ori_d4j_pids_bids()
                       if defects4j_utils.is_single_function_bug(pid, bid))
     d4j_multi = list((pid, bid) for pid, bid in defects4j_utils.ori_d4j_pids_bids()
@@ -223,7 +222,7 @@ if __name__ == '__main__':
                 print(pid, bid, _locate_method_path)
                 traceback.print_exc()
 
-    venn4(get_labels(_all_available_set), ['No extra', 'Issue', 'Stack', 'Issue+Stack'],
+    venn4(get_labels(_all_available_set), ['----', 'Issue', 'Stack', 'Issue+Stack'],
           dpi=128, fontsize=24, figsize=(16, 12))
     plt.savefig(f"{OUTPUT_PATH}/method_all_overlap_intersect_any.pdf")
     plt.show()

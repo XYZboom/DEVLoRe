@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 import matplotlib.pyplot as plt
 
 
@@ -38,12 +40,12 @@ if __name__ == '__main__':
     _evalSD = f"{OUTPUT_PATH}/EvaluateStackDebug"
     _evalISD = f"{OUTPUT_PATH}/EvaluateIssueStackDebug"
     _paths = [_eval, _evalI, _evalD, _evalS, _evalID, _evalIS, _evalSD, _evalISD]
-    _names = ["No extra", "Issue", "Debug", "Error", "Issue+Debug", "Issue+Error", "Error+Debug", "Issue+Error+Debug"]
+    _names = ["No extra", "Issue", "Debug", "Stack", "Issue+Debug", "Issue+Stack", "Stack+Debug", "Issue+Stack+Debug"]
     _multi_count = 0
     _single_count = 0
     _all_count = 0
     # range(6) here is {single, multi, all} x {available, all},
-    _eval_map: dict[str, list[set]] = {i: [(lambda: set())() for _ in range(6)] for i in _names}
+    _eval_map: Dict[str, List[set]] = {i: [(lambda: set())() for _ in range(6)] for i in _names}
     for pid, bid in defects4j_utils.ori_d4j_pids_bids():
         is_single = defects4j_utils.is_single_function_bug(pid, bid)
         _all_count += 1
@@ -81,10 +83,10 @@ if __name__ == '__main__':
     print(f"Union & {len(union[0])}/{_single_count}={len(union[0]) / _single_count * 100:.1f}\\% "
           f"& {len(union[1])}/{_multi_count}={len(union[1]) / _multi_count * 100:.1f}\\% "
           f"& {len(union[2])}/{_all_count}={len(union[2]) / _all_count * 100:.1f}\\% \\\\")
-    _labels = get_labels([_eval_map[k][4] for k in ["Issue", "Debug", "Error", "Issue+Debug", "Issue+Error"]])
+    _labels = get_labels([_eval_map[k][4] for k in ["Issue", "Debug", "Stack", "Issue+Debug", "Issue+Stack"]])
     print(_labels)
     venn5(_labels,
-          ["Issue", "Debug", "Error", "Issue+Debug", "Issue+Error"],
+          ["Issue", "Debug", "Stack", "Issue+Debug", "Issue+Stack"],
           dpi=96, fontsize=24, figsize=(18, 12), legend_loc='right')
     plt.savefig(f"{OUTPUT_PATH}/Overall_overlap.pdf")
     plt.show()
