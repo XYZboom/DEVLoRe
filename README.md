@@ -2,13 +2,13 @@
 
 ![Framework](./docs/imgs/framework.png)
 
-Our experimental data is available at [release page](https://github.com/XYZboom/BugFixLLM/releases/download/v0.0.1-pre/DEVLoRe-Data.zip)
+Our experimental data is available at [release page](https://github.com/XYZboom/DEVLoRe/releases/download/v0.0.1-pre/DEVLoRe-Data.zip)
 ## How to use
 
 - [x] **Step 1. Clone project**
 
 ```bash
-git clone https://github.com/XYZboom/BugFixLLM.git
+git clone https://github.com/XYZboom/DEVLoRe.git
 ```
 
 - [x] **Step 2. Install python requirements**
@@ -25,7 +25,7 @@ Note that we currently support Defects4j **v2.0.0** only.
 
 - [x] **Step 4. Download tools**
 
-Download tools from [release page](https://github.com/XYZboom/BugFixLLM/releases/).
+Download tools from [release page](https://github.com/XYZboom/DEVLoRe/releases/).
 
 - [x] **Step 5. Setup environment variables**
 - Create a ".env" file at the root of this project.
