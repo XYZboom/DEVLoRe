@@ -3,6 +3,8 @@
 ![Framework](./docs/imgs/framework.png)
 
 Our experimental data is available at [release page](https://github.com/XYZboom/DEVLoRe/releases/download/v0.0.1-pre/DEVLoRe-Data.zip)
+
+Useful links: [MethodRecorder](https://github.com/XYZboom/MethodRecorder), [DebugRecorder](https://github.com/XYZboom/DebugRecorder)
 ## How to use
 
 - [x] **Step 1. Clone project**
@@ -67,7 +69,7 @@ $CMD \
     -Xbootclasspath/a:$BASE/config/config.jar \
     -jar $BASE/lib/ant-launcher.jar $*
 ```
-After this, run [ExtractSkeleton.py](ExtractSkeleton.py) to get method skeleton.
+After this, run [ExtractSkeleton.py](src/ExtractSkeleton.py) to get method skeleton.
 
 - [x] **Step 7. Run modules**
 
@@ -87,12 +89,12 @@ issue url of project "Lang" in Defects4J is located at
 
 - Extract buggy method content
 
-Run [ExtractMethodAndField.py](ExtractMethodAndField.py) to extract buggy method content.
+Run [ExtractMethodAndField.py](src/ExtractMethodAndField.py) to extract buggy method content.
 
-The commandline arguments must be same as the ones when running [LocateMethod.py](LocateMethod.py).
+The commandline arguments must be same as the ones when running [LocateMethod.py](src/LocateMethod.py).
 
-That is: if you run [LocateMethod.py](LocateMethod.py) with "--add-issue-info=True" and without "--add-issue-info=True",
-then you must run [ExtractMethodAndField.py](ExtractMethodAndField.py) with "--add-issue-info=True" and without "
+That is: if you run [LocateMethod.py](src/LocateMethod.py) with "--add-issue-info=True" and without "--add-issue-info=True",
+then you must run [ExtractMethodAndField.py](src/ExtractMethodAndField.py) with "--add-issue-info=True" and without "
 --add-issue-info=True".
 
 - Extract debugging information
@@ -125,7 +127,7 @@ $CMD \
     -Xbootclasspath/a:$BASE/config/config.jar \
     -jar $BASE/lib/ant-launcher.jar $*
 ```
-Run [ExtractDebugInfo.py](ExtractDebugInfo.py) with same commandline arguments above.
+Run [ExtractDebugInfo.py](src/ExtractDebugInfo.py) with same commandline arguments above.
 - Locate buggy line
 ```bash
 python LocateLine.py --add-issue-info=True --add-stack-info=True --add-debug-info=True
