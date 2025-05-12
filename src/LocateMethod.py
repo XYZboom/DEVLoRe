@@ -10,6 +10,7 @@ D4J_EXEC = os.environ.get("DEFECTS4J_EXEC")
 D4J_JSON_PATH = os.environ.get("D4J_JSON_PATH")
 OUTPUT_PATH = os.environ.get("OUTPUT_PATH")
 EXTRACT_JAR_PATH = os.environ.get("EXTRACT_JAR_PATH")
+MODULE_NAME = os.environ.get("MODULE_NAME", "gpt-4o-mini")
 D4J_TRIGGER_KEY = "d4j.tests.trigger"
 D4J_RELEVANT_KEY = "d4j.classes.relevant"
 
@@ -78,7 +79,7 @@ if __name__ == '__main__':
             print(f"not enough info for {pid}_{bid}b")
             return
         print(f"start {pid}_{bid}b")
-        chat = Chat.Chat("gpt-4o-mini", SYS_PROMPT)
+        chat = Chat.Chat(MODULE_NAME, SYS_PROMPT)
         with open(_skeleton_path, mode="r") as _f:
             _skeleton = json.load(_f)
         _skeleton_of_classes = "\n".join([

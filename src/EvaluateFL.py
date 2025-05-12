@@ -55,10 +55,30 @@ def line_matches(tool_line: Dict[str, Set[int]], baseline_line: Dict[str, Set[in
     return True
 
 
+def approximate_llm_out(out: str) -> Set[str]:
+    _r = {
+        out.split("(")[0].strip(),
+        out.strip(),
+        out.replace(".java", "").strip(),
+        out.removesuffix(" method needs to be edited.").replace(": ", "::").strip(),
+        out.removesuffix(" method"),
+        out
+    }
+    return _r
+
+
+def approximate_baseline(out: str) -> Set[str]:
+    _r = {out, out.replace("::", ".")}
+    return _r
+
+
 def method_matches(tool_method: List[str], baseline_method: List[str], topn: int = 1) -> bool:
     for i in tool_method[0:topn]:
-        if i in baseline_method:
-            return True
+        for i0 in approximate_llm_out(i):
+            for baseline in baseline_method:
+                for b0 in approximate_baseline(baseline):
+                    if b0.endswith(i0):
+                        return True
     return False
 
 
@@ -119,6 +139,7 @@ if __name__ == '__main__':
                 with open(_locate_method_file, "r") as _f:
                     _raw = json.load(_f)
                     _gpt = list(handle_raw_response(_raw['response']).split(","))
+                    _gpt = list(filter(lambda s: len(s) > 0, _gpt))
                 if method_matches(_gpt, _ground):
                     _all_available.add((pid, bid))
                     if defects4j_utils.is_single_function_bug(pid, bid):
@@ -178,7 +199,6 @@ if __name__ == '__main__':
           f"{len(set.union(*_multi_top5)) / len(d4j_multi) * 100:.1f}\\% & "
           f"{len(set.union(*_all_top5)) / 835 * 100:.1f}\\% \\\\")
     # </editor-fold>
-
 
     # <editor-fold desc="old method">
     _single_all_set = [set(), set(), set(), set()]

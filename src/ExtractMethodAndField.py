@@ -20,6 +20,14 @@ def extract_buggy_method(_path, _members, _output):
 
 
 def handle_raw_response(_raw_response):
+    if '```' not in _raw_response:
+        if _raw_response.startswith('Locations that need to be edited to fix the issue:'):
+            _raw_response = _raw_response.replace('Locations that need to be edited to fix the issue:', '').strip()
+        _raw_list = _raw_response.replace(",", "#").split("\n")
+        _mapped_raw_list = map(lambda _raw_line: _raw_line.startswith("- "), _raw_list)
+        if any(_mapped_raw_list):
+            return ",".join(map(lambda s: s.removeprefix("- "), filter(lambda _raw_line: _raw_line.startswith("- "), _raw_list)))
+        return ",".join(_raw_list)
     pattern = r"^```[^\n]*\n(.*\n)*```\s*$"
     #               ^^^^^ match all char expect \n
     #                                 ^^^  match spaces at the end
