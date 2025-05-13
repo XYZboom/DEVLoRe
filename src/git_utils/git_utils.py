@@ -14,8 +14,11 @@ class GitCloneProgress(git.remote.RemoteProgress):
             self.progress_bar.update(cur_count - self.progress_bar.n)
 
 
-def git_clone(url: str, to_path: str):
-    progress_bar = tqdm(total=100, unit='B', unit_scale=True)
+def git_clone(url: str, to_path: str, desc: str = None) -> git.Repo:
+    if desc is None:
+        desc = f"clone from {url} to {to_path}"
+    progress_bar = tqdm(desc=desc, total=100, unit='B', unit_scale=True)
     # noinspection PyTypeChecker
-    git.Repo.clone_from(url, to_path, progress=GitCloneProgress(progress_bar))
+    __r = git.Repo.clone_from(url, to_path, progress=GitCloneProgress(progress_bar))
     progress_bar.close()
+    return __r
