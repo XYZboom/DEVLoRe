@@ -44,6 +44,9 @@ def prepare_swebench_lite_error_stack():
         if _pid == 'django':
             _failed_tests = swe_failed_test(_pid, _bid)
             print(f"ready to run test for {_pid}_{_bid}")
+            if not _failed_tests:
+                print(f"{_pid}_{_bid} failed test is empty", file=sys.stderr)
+                return
             stdout, stderr = run_cmd([_venv_py, "./runtests.py", "-v=0", *_failed_tests], f'{_path}/tests')
             open(_result_path, 'w').write(
                 stderr.replace(os.path.abspath(_path), '')

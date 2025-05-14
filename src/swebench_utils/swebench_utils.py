@@ -19,7 +19,7 @@ TEMP_PATH = os.environ.get("TMPDIR")
 
 from datasets import load_dataset
 
-__ds = load_dataset("SWE-bench/SWE-bench_Lite", split="test")
+__ds = load_dataset("princeton-nlp/SWE-bench_Lite", split="test")
 
 __all_pids = set(map(lambda data: data['repo'].split('/')[-1], __ds))
 __pid_data_dict = defaultdict(list)
@@ -28,7 +28,7 @@ for __data in __ds:
 
 
 def prepare_swebench_lite_repos():
-    ds = load_dataset("SWE-bench/SWE-bench_Lite", split="test")
+    ds = load_dataset("princeton-nlp/SWE-bench_Lite", split="test")
 
     repos = set(map(lambda data: data['repo'], ds))
     for repo in repos:
