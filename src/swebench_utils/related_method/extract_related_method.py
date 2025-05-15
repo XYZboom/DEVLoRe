@@ -60,9 +60,9 @@ def __do_extract(_pid, _bid):
 
 if __name__ == '__main__':
     # for pid, bid in swe_pids_bids():
+    #     if pid != 'django' or bid != 47:
+    #         continue
     #     __do_extract(pid, bid)
-    #     if pid == 'django':
-    #         break
     with concurrent.futures.ThreadPoolExecutor(
             max_workers=MAX_WORKERS
     ) as executor:

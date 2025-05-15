@@ -2,11 +2,14 @@ import argparse
 import os.path
 import runpy
 import sys
+import threading
 from collections import defaultdict
 from functools import reduce
 from types import FrameType
 from typing import List, Dict, Set
 import trace
+
+from src.common_utils import file_names_to_tree
 
 
 class DjangoTrace:
@@ -18,10 +21,13 @@ class DjangoTrace:
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.settrace(None)
         with open(self.save_file_name, 'w') as __f:
-            result = reduce(lambda x, y: x & y, self.recorded_methods.values())
-            for name in result:
-                print(name)
-                __f.write(name + '\n')
+            __f.write(file_names_to_tree(map(lambda _s: self.remove_prefix(_s), self.recorded_files)))
+
+    def remove_prefix(self, file_name: str) -> str:
+        _r = file_name
+        for allow_file in self.allow_files:
+            _r = _r.removeprefix(allow_file)
+        return _r
 
     def __init__(self, save_file: str, allow_files: List[str], test_names: List[str]):
         _parent_path = os.path.abspath(os.path.join(save_file, os.pardir))
@@ -29,34 +35,20 @@ class DjangoTrace:
             os.makedirs(_parent_path)
         self.save_file_name = save_file
         self.allow_files = allow_files
-        self.recorded_methods: Dict[str, Set[str]] = defaultdict(set)
+        self.recorded_files: Set[str] = set()
         self.test_names = test_names
-        self.test_method_now: str | None = None
 
     def trace_calls(self, frame: FrameType, _event: str, args):
         file_name = frame.f_code.co_filename
         func_name = frame.f_code.co_name
-        lineno = frame.f_lineno
-        enter_test = any(map(lambda _method_name: _method_name.endswith(func_name), self.test_names))
-        if enter_test:
-            if _event == 'call':
-                self.test_method_now = func_name
-            elif _event == 'return':
-                self.test_method_now = None
-        if not self.test_method_now:
-            return
         allow_record = any(map(lambda _f_name: file_name.startswith(_f_name), self.allow_files))
-        if 'site-packages' in file_name:
+        if 'site-packages' in file_name or 'test' in file_name:
             allow_record = False
         if func_name.startswith('<') and func_name.endswith('>'):
-            allow_record = False
-        if func_name == '<module>':
-            allow_record = True
+            allow_record = allow_record and func_name == '<module>'
         if allow_record:
-            print(file_name, func_name, lineno, _event)
-        if allow_record and _event == 'call':
             # print(file_name, func_name, lineno, _event)
-            self.recorded_methods[self.test_method_now].add(f'{file_name} ---- {func_name}')
+            self.recorded_files.add(file_name)
         return self.trace_calls
 
 
@@ -71,7 +63,7 @@ if __name__ == '__main__':
 
     print(f'filter files: {parsed_args.f}')
 
-    mock_args = [parsed_args.script] + parsed_args.args
+    mock_args = [parsed_args.script, "--noinput", "--parallel", "1"] + parsed_args.args
 
     original_argv = sys.argv.copy()
     _work_dir = os.path.dirname(parsed_args.script)
