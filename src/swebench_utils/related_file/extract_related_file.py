@@ -34,31 +34,31 @@ def __do_extract(_pid, _bid):
              _test_script, _extract_path,
              "-f", _path, os.path.join(TEMP_PATH, f'{_pid}_{_bid}b'),
              "-args", *_failed_tests])
-    elif _pid == 'seaborn':
+    elif _pid == 'seaborn' or _pid == 'matplotlib':
         _ori_argv = sys.argv
         _test_script = os.path.join(os.path.dirname(_venv_py), 'pytest')
         _failed_tests = swe_failed_test(_pid, _bid)
         if not _failed_tests:
             return
         subprocess.run(
-            [_venv_py, os.path.abspath(os.path.join(__file__, os.path.pardir, 'do_extract_related_file_seaborn.py')),
+            [_venv_py, os.path.abspath(os.path.join(__file__, os.path.pardir, 'do_extract_related_file_pytest.py')),
              _test_script, _path, _extract_path,
              "-f", _path, os.path.join(TEMP_PATH, f'{_pid}_{_bid}b'),
              "-args", *_failed_tests])
 
 
 if __name__ == '__main__':
-    for pid, bid in swe_pids_bids():
-        __do_extract(pid, bid)
-    # with concurrent.futures.ThreadPoolExecutor(
-    #         max_workers=MAX_WORKERS
-    # ) as executor:
-    #     futures = [
-    #         executor.submit(
-    #             __do_extract,
-    #             pid,
-    #             bid
-    #         )
-    #         for pid, bid in swe_pids_bids()
-    #     ]
-    #     concurrent.futures.wait(futures)
+    # for pid, bid in swe_pids_bids():
+    #     __do_extract(pid, bid)
+    with concurrent.futures.ThreadPoolExecutor(
+            max_workers=MAX_WORKERS
+    ) as executor:
+        futures = [
+            executor.submit(
+                __do_extract,
+                pid,
+                bid
+            )
+            for pid, bid in swe_pids_bids()
+        ]
+        concurrent.futures.wait(futures)
