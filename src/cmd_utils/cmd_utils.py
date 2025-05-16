@@ -3,10 +3,10 @@ import sys
 from typing import List, Tuple
 
 
-def run_cmd(args: List[str], cwd: str) -> Tuple[str, str]:
+def run_cmd(args: List[str], cwd: str, env=None) -> Tuple[str, str]:
     _process = subprocess.Popen(args,
                                 cwd=cwd,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     _out, _err = _process.communicate()
     print(_out.decode())
     print(_err.decode(), file=sys.stderr)

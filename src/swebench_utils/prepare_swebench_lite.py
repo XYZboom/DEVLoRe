@@ -38,7 +38,7 @@ def prepare_swebench_lite_error_stack():
         if os.path.exists(_result_path):
             print(f"error stack for {_pid}_{_bid} exists")
             return
-        if _pid not in ['django', 'seaborn']:
+        if _pid not in ['django', 'seaborn', 'matplotlib']:
             return
         _venv_py = checkout(_pid, _bid, _path)
         if _pid == 'django':
@@ -53,14 +53,16 @@ def prepare_swebench_lite_error_stack():
                 .replace(os.path.abspath(os.path.join(_venv_py, os.path.pardir, os.path.pardir)), '')
                 .replace(os.path.abspath(os.path.join(SWEBENCH_LITE_PREPARE_PATH, f'./bugs/{_pid}_{_bid}b')), '')
             )
-        elif _pid == 'seaborn':
+        elif _pid == 'seaborn' or _pid == 'matplotlib':
             _failed_tests = swe_failed_test(_pid, _bid)
             print(f"ready to run test for {_pid}_{_bid}")
             if not _failed_tests:
                 print(f"{_pid}_{_bid} failed test is empty", file=sys.stderr)
                 return
-            stdout, stderr = run_cmd([_venv_py, os.path.join(os.path.dirname(_venv_py), 'pytest')
-                                     , "-n", "0", *_failed_tests], _path)
+            env = os.environ.copy()
+            env['PY_IGNORE_IMPORTMISMATCH'] = '1'
+            stdout, stderr = run_cmd([_venv_py, os.path.join(os.path.dirname(_venv_py), 'pytest'),
+                                      "-n", "0", *_failed_tests], _path, env=env)
             open(_result_path, 'w').write(
                 stdout.replace(os.path.abspath(_path), '')
                 .replace(os.path.abspath(os.path.join(_venv_py, os.path.pardir, os.path.pardir)), '')
@@ -117,17 +119,20 @@ def __checkout(_pid: str, _bid: int, _path: str) -> str:  # returns venv python 
         _venv_py_path = os.path.join(_venv_path, "Scripts", "python3")
     else:
         _venv_py_path = os.path.join(_venv_path, "bin", "python3")
-    if os.path.exists(f'{_path}/requirements.txt'):
-        subprocess.run([_venv_py_path, "-m", "pip", "install", "-r", f'{_path}/requirements.txt'], check=True)
-    elif os.path.exists(f'{_path}/setup.py'):
+    if _pid == 'django':
         run_cmd_no_popen([_venv_py_path, "-m", "pip", "install", "-e", "."], cwd=_path)
-        if _pid == 'django':
-            run_cmd_no_popen([_venv_py_path, "-m", "pip", "install", "-r", "tests/requirements/py3.txt"],
-                             cwd=_path)
-    if _pid == 'seaborn':
+        run_cmd_no_popen([_venv_py_path, "-m", "pip", "install", "-r", "tests/requirements/py3.txt"],
+                         cwd=_path)
+    elif _pid == 'seaborn':
         run_cmd_no_popen([_venv_py_path, "-m", "pip", "install", ".[dev]"], cwd=_path)
         run_cmd_no_popen([_venv_py_path, "-m", "pip", "install", "numpy==1.25.0"], cwd=_path)
         run_cmd_no_popen([_venv_py_path, "-m", "pip", "install", "matplotlib==3.5"], cwd=_path)
+    elif _pid == 'matplotlib':
+        run_cmd_no_popen([_venv_py_path, "-m", "pip", "install", "pytest", "--force-reinstall"], cwd=_path)
+        run_cmd_no_popen([_venv_py_path, "-m", "pip", "install", "-r", "requirements/dev/dev-requirements.txt"],
+                         cwd=_path)
+        run_cmd_no_popen([_venv_py_path, "-m", "pip", "install", "-ve", ".", "--force-reinstall"],
+                         cwd=_path)
     __repo.git.checkout(__my_data['base_commit'])
     _test_patch_path = f'{_path}/swebench_test.patch'
     _fix_patch_path = f'{_path}/swebench_fix.patch'
@@ -140,7 +145,7 @@ def __checkout(_pid: str, _bid: int, _path: str) -> str:  # returns venv python 
 def prepare_swebench_lite_venvs():
     @record_error_stack
     def __prepare_swebench_lite_venvs(_pid, _bid):
-        if _pid not in ['django', 'seaborn']:
+        if _pid not in ['django', 'seaborn', 'matplotlib']:
             print(f'does not support {_pid}_{_bid} now')
             return
         _path = f"{SWEBENCH_LITE_PREPARE_PATH}/bugs/{_pid}_{_bid}b"

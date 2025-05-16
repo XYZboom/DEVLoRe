@@ -12,7 +12,7 @@ import trace
 from src.common_utils import file_names_to_tree
 
 
-class SeabornTrace:
+class PytestTrace:
 
     def __enter__(self):
         sys.settrace(self.trace_calls)
@@ -83,7 +83,7 @@ if __name__ == '__main__':
         '__builtins__': __builtins__,
     }
     with open(parsed_args.script, 'r') as f:
-        with SeabornTrace(parsed_args.save_file, parsed_args.f, parsed_args.args):
+        with PytestTrace(parsed_args.save_file, parsed_args.f, parsed_args.args):
             print(sys.gettrace())
             import pytest
             pytest.main()
