@@ -1,3 +1,6 @@
+"""
+The extract the project **USING** pytest, not pytest itself
+"""
 import argparse
 import os.path
 import runpy
