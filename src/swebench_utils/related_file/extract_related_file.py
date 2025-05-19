@@ -21,8 +21,9 @@ def __do_extract(_pid, _bid):
         print(f'{_pid}_{_bid} related files are already extracted')
         return
     _venv_py = f'{_path}_venv/bin/python'
-    if _pid not in ['django', 'seaborn']:
+    if _pid not in ['django', 'seaborn', 'matplotlib']:
         print(f'does not support {_pid}')
+        return
     if _pid == 'django':
         _ori_argv = sys.argv
         _test_script = os.path.join(_path, 'tests/runtests.py')
@@ -41,7 +42,7 @@ def __do_extract(_pid, _bid):
         if not _failed_tests:
             return
         subprocess.run(
-            [_venv_py, os.path.abspath(os.path.join(__file__, os.path.pardir, 'do_extract_related_file_pytest.py')),
+            [_venv_py, os.path.abspath(os.path.join(__file__, os.path.pardir, 'do_extract_related_file_in_pytest.py')),
              _test_script, _path, _extract_path,
              "-f", _path, os.path.join(TEMP_PATH, f'{_pid}_{_bid}b'),
              "-args", *_failed_tests])

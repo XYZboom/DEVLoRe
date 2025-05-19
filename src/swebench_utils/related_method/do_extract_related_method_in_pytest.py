@@ -9,8 +9,10 @@ from types import FrameType
 from typing import List, Dict, Set
 import trace
 
+from src.common_utils import file_names_to_tree
 
-class DjangoTrace:
+
+class PytestTrace:
 
     def __enter__(self):
         sys.settrace(self.trace_calls)
@@ -21,10 +23,13 @@ class DjangoTrace:
         # for k in self.recorded_file_methods:
         #     with open(f'{self.save_file_name}_{k}', 'w') as __f:
         #         __f.write('\n'.join(self.recorded_file_methods[k]))
+        if len(self.recorded_files) == 0:
+            return
         with open(self.save_file_name, 'w') as __f:
             result = reduce(lambda x, y: x + y, self.recorded_files.values())
             for file_name in result:
                 for method in self.recorded_methods[file_name]:
+                    # print(file_name + ' ---- ' + method)
                     __f.write(file_name + ' ---- ' + method + '\n')
 
     def __init__(self, save_file: str, allow_files: List[str], test_names: List[str]):
@@ -75,19 +80,19 @@ class DjangoTrace:
 
 if __name__ == '__main__':
     print("==========================")
+    print(sys.argv)
     parser = argparse.ArgumentParser()
-    parser.add_argument("script", help="the script to run")
+    parser.add_argument("script", help="the path to script")
+    parser.add_argument("work_dir", help="the path to run seaborn tests")
     parser.add_argument("save_file", help="the file to save results")
     parser.add_argument("-f", "-file", nargs="*", help="filter files")
     parser.add_argument("-args", nargs="*", help="the args passed to the script")
     parsed_args = parser.parse_args()
 
-    print(f'filter files: {parsed_args.f}')
-
-    mock_args = [parsed_args.script, "--noinput", "--parallel", "1"] + parsed_args.args
+    mock_args = ["", "-n", "0", "--no-cov", '--no-header'] + parsed_args.args
 
     original_argv = sys.argv.copy()
-    _work_dir = os.path.dirname(parsed_args.script)
+    _work_dir = parsed_args.work_dir
     os.chdir(_work_dir)
     os.environ['PWD'] = _work_dir
     os.environ['OLDPWD'] = os.path.dirname(_work_dir)
@@ -101,8 +106,9 @@ if __name__ == '__main__':
         '__builtins__': __builtins__,
     }
     with open(parsed_args.script, 'r') as f:
-        code = compile(f.read(), parsed_args.script, 'exec')
-        with DjangoTrace(parsed_args.save_file, parsed_args.f, parsed_args.args):
-            exec(code, globals_dict)
+        import pytest
+
+        with PytestTrace(parsed_args.save_file, parsed_args.f, parsed_args.args):
+            pytest.main()
             # exec(f.read())
     sys.argv = original_argv
