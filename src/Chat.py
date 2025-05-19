@@ -5,7 +5,7 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionSystemMessageParam, \
     ChatCompletionUserMessageParam
 
-from IllegalStateException import IllegalStateException
+from src.IllegalStateException import IllegalStateException
 
 
 def create_message(content: str) -> ChatCompletionUserMessageParam:
