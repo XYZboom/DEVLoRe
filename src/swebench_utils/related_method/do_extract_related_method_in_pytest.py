@@ -1,4 +1,5 @@
 import argparse
+import json
 import os.path
 import runpy
 import sys
@@ -23,14 +24,10 @@ class PytestTrace:
         # for k in self.recorded_file_methods:
         #     with open(f'{self.save_file_name}_{k}', 'w') as __f:
         #         __f.write('\n'.join(self.recorded_file_methods[k]))
-        if len(self.recorded_files) == 0:
+        if len(self.recorded_methods) == 0:
             return
         with open(self.save_file_name, 'w') as __f:
-            result = reduce(lambda x, y: x + y, self.recorded_files.values())
-            for file_name in result:
-                for method in self.recorded_methods[file_name]:
-                    # print(file_name + ' ---- ' + method)
-                    __f.write(file_name + ' ---- ' + method + '\n')
+            json.dump({k: list(self.recorded_methods[k]) for k in self.recorded_methods}, __f)
 
     def __init__(self, save_file: str, allow_files: List[str], test_names: List[str]):
         _parent_path = os.path.abspath(os.path.join(save_file, os.pardir))
@@ -57,7 +54,7 @@ class PytestTrace:
             allow_record = func_name == '<module>'
         # if allow_record:
         #     print(file_name, func_name, lineno, _event)
-        enter_test = any(map(lambda _method_name: _method_name.split('.')[-1] == func_name, self.test_names))
+        enter_test = any(map(lambda _method_name: _method_name.split('::')[-1] == func_name, self.test_names))
         if enter_test:
             if _event == 'call':
                 # print(f'inside test: {self.test_method_now}', threading.current_thread().name)

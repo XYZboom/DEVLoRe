@@ -18,7 +18,7 @@ MAX_WORKERS = int(os.environ.get("MAX_WORKERS", default=16))
 
 def __do_extract(_pid, _bid):
     _path = os.path.join(SWEBENCH_LITE_PREPARE_PATH, f'bugs/{_pid}_{_bid}b')
-    _extract_path = os.path.join(SWEBENCH_LITE_PREPARE_PATH, 'related_methods', f'{_pid}_{_bid}b.txt')
+    _extract_path = os.path.join(SWEBENCH_LITE_PREPARE_PATH, 'related_methods', f'{_pid}_{_bid}b.json')
     _venv_py = f'{_path}_venv/bin/python'
     if os.path.exists(_extract_path):
         print(f'{_pid}_{_bid} related files are already extracted')
