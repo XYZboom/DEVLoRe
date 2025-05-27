@@ -1,16 +1,10 @@
 import os
 import re
-import shutil
-import subprocess
-import sys
 from collections import defaultdict
-from typing import Iterable, List
-import venv
+from typing import Iterable
 
-import git
 from dotenv import load_dotenv, find_dotenv
 
-from src.cmd_utils.cmd_utils import run_cmd
 from src.git_utils.git_utils import git_clone
 
 _ = load_dotenv(find_dotenv())
@@ -58,18 +52,6 @@ def swe_pids_bids():
 __django_test_reg = re.compile(r"([a-zA-Z0-9._]+) \(([a-zA-Z0-9._]+)\)$")
 
 
-def handle_swe_failed_test(ori: str, django: bool = False) -> List[str]:
-    __r = eval(ori)
-    if django:
-        __new_r = []
-        for _name in __r:
-            match = re.search(__django_test_reg, _name)
-            if match:
-                __new_r.append(f'{match.group(2)}.{match.group(1)}')
-        __r = __new_r
-    return __r
-
-
 def swe_failed_test(_pid: str, _bid: int):
     __r = eval(__pid_data_dict[_pid][_bid]['FAIL_TO_PASS'])
     if _pid == 'django':
@@ -80,6 +62,10 @@ def swe_failed_test(_pid: str, _bid: int):
                 __new_r.append(f'{match.group(2)}.{match.group(1)}')
         __r = __new_r
     return __r
+
+
+def docker_id(_pid: str, _bid: int) -> str:
+    return raw_data(_pid, _bid)['instance_id']
 
 
 def raw_data(_pid: str, _bid: int):
