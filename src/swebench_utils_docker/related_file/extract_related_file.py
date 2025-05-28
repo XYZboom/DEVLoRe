@@ -9,6 +9,7 @@ from src.swebench_utils_docker.docker_utils import copy_from_container
 _ = load_dotenv(find_dotenv())
 OUTPUT_PATH = os.environ.get('OUTPUT_PATH')
 MAX_WORKERS = int(os.environ.get('MAX_WORKERS', default=16))
+SWEBENCH_LITE_PREPARE_PATH = os.environ.get("SWEBENCH_LITE_PREPARE_PATH")
 import sys
 from pathlib import Path, PurePosixPath
 import concurrent.futures
@@ -27,7 +28,7 @@ from swebench.harness.utils import load_swebench_dataset
 @record_error_stack
 def __do_extract(_instance: SWEbenchInstance):
     my_id = _instance['instance_id']
-    _result_path = Path(OUTPUT_PATH) / f'related_file/{my_id}.txt'
+    _result_path = Path(SWEBENCH_LITE_PREPARE_PATH) / f'related_file/{my_id}.txt'
     if _result_path.exists():
         print(f'{my_id} exists')
         return
@@ -114,9 +115,9 @@ def __do_extract(_instance: SWEbenchInstance):
         (eval_result, _, _) = exec_run_with_timeout(container, '/bin/bash /eval.sh', timeout=None)
         print(eval_result)
     print(f'copy result for {my_id}')
-    copy_from_container(container, f'/related_file/{my_id}.txt', Path(OUTPUT_PATH) / f'related_file/')
+    copy_from_container(container, f'/related_file/{my_id}.txt', Path(SWEBENCH_LITE_PREPARE_PATH) / f'related_file/')
     print(f'copy result success for {my_id}')
-    cleanup_container(client, container, logger)
+    # container.stop(timeout=15)
     # remove_image(client, test_spec.instance_image_key, logger)
 
 
