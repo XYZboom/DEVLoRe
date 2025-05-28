@@ -28,7 +28,7 @@ from swebench.harness.utils import load_swebench_dataset
 @record_error_stack
 def __do_extract(_instance: SWEbenchInstance):
     my_id = _instance['instance_id']
-    _result_path = Path(SWEBENCH_LITE_PREPARE_PATH) / f'related_file/{my_id}.txt'
+    _result_path = Path(SWEBENCH_LITE_PREPARE_PATH) / f'related_files/{my_id}.txt'
     if _result_path.exists():
         print(f'{my_id} exists')
         return
@@ -88,7 +88,7 @@ def __do_extract(_instance: SWEbenchInstance):
         except:
             pass
         eval_cmd_list = test_spec.eval_script_list.copy()
-        eval_cmd_list[-3] = (f'python {eval_py_path} {pytest_path} /testbed /related_file/{my_id}.txt '
+        eval_cmd_list[-3] = (f'python {eval_py_path} {pytest_path} /testbed /related_files/{my_id}.txt '
                              f'-f /testbed '
                              f'-args {failed_test}')
         eval_path = PurePosixPath('/eval.sh')
@@ -105,7 +105,7 @@ def __do_extract(_instance: SWEbenchInstance):
         except:
             pass
         eval_cmd_list = test_spec.eval_script_list.copy()
-        eval_cmd_list[-3] = (f'python {eval_py_path} /testbed/tests/runtests.py /related_file/{my_id}.txt '
+        eval_cmd_list[-3] = (f'python {eval_py_path} /testbed/tests/runtests.py /related_files/{my_id}.txt '
                              f'-f /testbed '
                              f'-args {failed_test}')
         eval_path = PurePosixPath('/eval.sh')
@@ -115,7 +115,7 @@ def __do_extract(_instance: SWEbenchInstance):
         (eval_result, _, _) = exec_run_with_timeout(container, '/bin/bash /eval.sh', timeout=None)
         print(eval_result)
     print(f'copy result for {my_id}')
-    copy_from_container(container, f'/related_file/{my_id}.txt', Path(SWEBENCH_LITE_PREPARE_PATH) / f'related_file/')
+    copy_from_container(container, f'/related_files/{my_id}.txt', Path(SWEBENCH_LITE_PREPARE_PATH) / f'related_files/')
     print(f'copy result success for {my_id}')
     # container.stop(timeout=15)
     # remove_image(client, test_spec.instance_image_key, logger)

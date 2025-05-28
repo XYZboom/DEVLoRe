@@ -67,6 +67,7 @@ def __do_extract(_instance: SWEbenchInstance):
     eval_out_docker_path.write_text('\n'.join(eval_cmd_list))
     copy_to_container(container, eval_out_docker_path, eval_path)
     (eval_result, _, _) = exec_run_with_timeout(container, '/bin/bash /eval.sh', timeout=None)
+    eval_result = eval_result.replace("/testbed/", "")
     print(eval_result)
     with open(_result_path, 'w') as __f:
         __f.write(eval_result)
