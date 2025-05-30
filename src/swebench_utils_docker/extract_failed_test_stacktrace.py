@@ -57,11 +57,8 @@ def __do_extract(_instance: SWEbenchInstance):
     if repo_name == 'django/django':
         eval_cmd_list[-3] = (f'python /testbed/tests/runtests.py -v=0 --noinput --parallel 1 {failed_test} '
                              fr"| sed -e 's/\x1B\[[0-9;]*[a-zA-Z]//g'")
-    elif repo_name == 'sympy/sympy':
-        eval_cmd_list[-3] = eval_cmd_list[-3] + fr" | sed -e 's/\x1B\[[0-9;]*[a-zA-Z]//g'"
     else:
-        eval_cmd_list[-3] = (f"python -m pytest {failed_test} "
-                             fr"| sed -e 's/\x1B\[[0-9;]*[a-zA-Z]//g'")
+        eval_cmd_list[-3] = eval_cmd_list[-3] + fr" | sed -e 's/\x1B\[[0-9;]*[a-zA-Z]//g'"
     eval_path = PurePosixPath('/eval.sh')
     eval_out_docker_path = Path(logger_dir) / 'eval.sh'
     eval_out_docker_path.write_text('\n'.join(eval_cmd_list))
