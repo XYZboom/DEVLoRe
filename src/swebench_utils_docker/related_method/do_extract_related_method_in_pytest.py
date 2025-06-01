@@ -53,7 +53,7 @@ class PytestTrace:
         func_name = frame.f_code.co_name
         lineno = frame.f_lineno
         allow_record = any(map(lambda _f_name: file_name.startswith(_f_name), self.allow_files))
-        if 'site-packages' in file_name or 'test' in remove_prefix(file_name, '/testbed'):
+        if 'site-packages' in file_name:
             allow_record = False
         elif func_name.startswith('<') and func_name.endswith('>'):
             allow_record = func_name == '<module>'
@@ -62,7 +62,7 @@ class PytestTrace:
         enter_test = any(map(lambda _method_name: _method_name.split('::')[-1] == func_name, self.test_names))
         if enter_test:
             if _event == 'call':
-                # print(f'inside test: {self.test_method_now}', threading.current_thread().name)
+                # print(f'inside test: {self.test_method_now}')
                 if not self.test_method_now:
                     # print('enter test', file_name, func_name, lineno)
                     self.test_method_now = func_name
@@ -103,7 +103,6 @@ if __name__ == '__main__':
         pre_mock_args.extend(['--no-cov'])
     except:
         pass
-    pre_mock_args.append('--no-header')
     mock_args = pre_mock_args + parsed_args.args
 
     original_argv = sys.argv.copy()

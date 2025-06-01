@@ -67,7 +67,6 @@ def __do_extract(_instance: SWEbenchInstance):
     # print(failed_test)
     # return
     if repo_name == 'sympy/sympy':
-        return
         eval_py_path = PurePosixPath('/extract_related_method.py')
         try:
             # copy_to_container may delete a non-exists file
@@ -75,6 +74,9 @@ def __do_extract(_instance: SWEbenchInstance):
         except:
             pass
         eval_cmd_list = test_spec.eval_script_list.copy()
+        for i, eval_cmd in enumerate(eval_cmd_list):
+            if eval_cmd.startswith('git checkout'):
+                eval_cmd_list[i] = ' '.join(eval_cmd.split(' ')[:3]) + ' -f'
         want_cmd_list = []
         _exec_met = False
         for cmd in eval_cmd_list[-3].split(' '):
@@ -108,9 +110,12 @@ def __do_extract(_instance: SWEbenchInstance):
         except:
             pass
         eval_cmd_list = test_spec.eval_script_list.copy()
+        for i, eval_cmd in enumerate(eval_cmd_list):
+            if eval_cmd.startswith('git checkout'):
+                eval_cmd_list[i] = ' '.join(eval_cmd.split(' ')[:3]) + ' -f'
         eval_cmd_list[-3] = (f'python {eval_py_path} {pytest_path} /testbed /related_methods/{my_id}.json '
                              f'-f /testbed '
-                             f'-args {detailed_failed_test}')
+                             f'-args {failed_test}')
         eval_path = PurePosixPath('/eval.sh')
         eval_out_docker_path = Path(logger_dir) / 'eval.sh'
         eval_out_docker_path.write_text('\n'.join(eval_cmd_list))
@@ -125,9 +130,12 @@ def __do_extract(_instance: SWEbenchInstance):
         except:
             pass
         eval_cmd_list = test_spec.eval_script_list.copy()
+        for i, eval_cmd in enumerate(eval_cmd_list):
+            if eval_cmd.startswith('git checkout'):
+                eval_cmd_list[i] = ' '.join(eval_cmd.split(' ')[:3]) + ' -f'
         eval_cmd_list[-3] = (f'python {eval_py_path} /testbed/tests/runtests.py /related_methods/{my_id}.json '
                              f'-f /testbed '
-                             f'-args {detailed_failed_test}')
+                             f'-args {failed_test}')
         eval_path = PurePosixPath('/eval.sh')
         eval_out_docker_path = Path(logger_dir) / 'eval.sh'
         eval_out_docker_path.write_text('\n'.join(eval_cmd_list))
@@ -147,10 +155,10 @@ if __name__ == '__main__':
     instances = load_swebench_dataset('princeton-nlp/SWE-bench_Lite')
     # __do_extract(instances[0])
     # for i in instances:
-    #     if i['repo'] != 'django/django':
+    #     if i['instance_id'] != 'pytest-dev__pytest-5103':
     #         continue
     #     __do_extract(i)
-    #     if i['repo'] == 'django/django':
+    #     if i['instance_id'] == 'pytest-dev__pytest-5103':
     #         break
     with concurrent.futures.ThreadPoolExecutor(
             max_workers=MAX_WORKERS

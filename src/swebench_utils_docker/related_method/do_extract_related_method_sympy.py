@@ -72,7 +72,7 @@ class PytestTrace:
         func_name = frame.f_code.co_name
         lineno = frame.f_lineno
         allow_record = any(map(lambda _f_name: file_name.startswith(_f_name), self.allow_files))
-        if 'site-packages' in file_name or 'test' in remove_prefix(file_name, '/testbed'):
+        if 'site-packages' in file_name:
             allow_record = False
         elif func_name.startswith('<') and func_name.endswith('>'):
             allow_record = func_name == '<module>'
