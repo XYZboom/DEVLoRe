@@ -58,7 +58,7 @@ def __do_extract(_instance: SWEbenchInstance, _add_stack: bool, _add_issue: bool
         _locate_file_path = Path(OUTPUT_PATH) / "LocateFileIssue"
         _locate_method_path = Path(OUTPUT_PATH) / "LocateMethodIssue"
     else:
-        _result_path = Path(OUTPUT_PATH) / f'debug_info/{my_id}.json'
+        _result_path = Path(OUTPUT_PATH) / f'debug_info_/{my_id}.json'
         _locate_file_path = Path(OUTPUT_PATH) / "LocateFile"
         _locate_method_path = Path(OUTPUT_PATH) / "LocateMethod"
 
