@@ -109,7 +109,6 @@ if __name__ == '__main__':
             print(f"not enough info for {my_id}")
             return
         print(f"start {my_id}")
-        chat = Chat.Chat(MODULE_NAME, SYS_PROMPT)
         with open(_skeleton_path, 'r') as _f:
             _skeleton_json = json.load(_f)
         with open(_failed_test_path, mode="r") as _f:
@@ -119,7 +118,7 @@ if __name__ == '__main__':
         with open(_method_content_path, 'r') as _f:
             _method_content = json.load(_f)
         with open(locate_line_path, 'r') as _f:
-            _possible_bug_locations = json.load(_f)['response']
+            _possible_bug_locations_list = json.load(_f)['responses']
         _locate_files = _locate_files.split("\n")
 
         def join_methods(methods):
@@ -173,31 +172,35 @@ if __name__ == '__main__':
                 return
         else:
             _debug_info = ""
-        user_prompt = LocateLinePrompt.format(
-            skeleton_of_files=_skeleton,
-            stack_info=_stack_info,
-            failed_tests=_failed_test,
-            issue_content=issue_content,
-            debug_info=_debug_info,
-            possible_bug_locations=_possible_bug_locations,
-        )
-        if not _dry_run:
-            try:
-                message = chat.chat(user_prompt)
-            except Exception as e:
-                traceback.print_exc()
-                return
-            _result = {
-                "system_prompt": SYS_PROMPT,
-                "user_prompt": user_prompt,
-                "response": message,
-            }
-            print(f"finish chat in {my_id}")
-            with open(_output_path / f"{my_id}.json", "w") as _f:
-                json.dump(_result, _f)
-            print(f"finish {my_id}")
-        else:
-            print(user_prompt)
+        _results = []
+        for _possible_bug_locations in set(_possible_bug_locations_list):
+            chat = Chat.Chat(MODULE_NAME, SYS_PROMPT)
+            user_prompt = LocateLinePrompt.format(
+                skeleton_of_files=_skeleton,
+                stack_info=_stack_info,
+                failed_tests=_failed_test,
+                issue_content=issue_content,
+                debug_info=_debug_info,
+                possible_bug_locations=_possible_bug_locations,
+            )
+            if not _dry_run:
+                try:
+                    messages = chat.chat(user_prompt, 3)
+                except Exception as e:
+                    traceback.print_exc()
+                    return
+                _result = {
+                    "system_prompt": SYS_PROMPT,
+                    "user_prompt": user_prompt,
+                    "responses": messages,
+                }
+                _results.append(_result)
+            else:
+                print(user_prompt)
+        print(f"finish chat in {my_id}")
+        with open(_output_path / f"{my_id}.json", "w") as _f:
+            json.dump(_results, _f)
+        print(f"finish {my_id}")
 
 
     instances = load_swebench_dataset('princeton-nlp/SWE-bench_Lite')
