@@ -164,14 +164,14 @@ if __name__ == '__main__':
         )
         if not _dry_run:
             try:
-                message = chat.chat(user_prompt)
+                messages = chat.chat(user_prompt, 10)
             except Exception as e:
                 traceback.print_exc()
                 return
             _result = {
                 "system_prompt": SYS_PROMPT,
                 "user_prompt": user_prompt,
-                "response": message,
+                "responses": messages,
             }
             print(f"finish chat in {my_id}")
             with open(_output_path / f"{my_id}.json", "w") as _f:
