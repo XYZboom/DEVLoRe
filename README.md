@@ -7,6 +7,9 @@ Our experimental data is available at [release page](https://github.com/XYZboom/
 Useful links: [MethodRecorder](https://github.com/XYZboom/MethodRecorder), [DebugRecorder](https://github.com/XYZboom/DebugRecorder)
 ## How to use
 
+This repository is mainly focused on fixing bugs in Defects4J ([https://github.com/rjust/defects4j](https://github.com/rjust/defects4j)).
+If you are looking for documentation on swebench, please refer to [this link](./docs/swebench.md).
+
 - [x] **Step 1. Clone project**
 
 ```bash
@@ -39,6 +42,7 @@ DEFECTS4J_EXEC=/path/to/defects4j/framework/bin/defects4j
 OUTPUT_PATH=where_to_output
 D4J_JSON_PATH=where_to_find_baseline_buggy_locations
 EXTRACT_JAR_PATH=/path/to/RelatedMethodExtractor.jar
+MODULE_NAME=your LLM name, gpt-4o-mini better
 ```
 
 - [x] **Step 6. Run data preparation scripts**
